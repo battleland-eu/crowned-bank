@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank.remote;
 
 import com.google.gson.JsonObject;
+import eu.battleland.crownedbank.abstracted.Identifiable;
 import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.model.Account;
 import lombok.NonNull;
@@ -8,7 +9,9 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 
-public interface Remote {
+public interface Remote
+        extends Identifiable {
+
 
     /**
      * Configure remote.
@@ -42,6 +45,6 @@ public interface Remote {
     /**
      * Remote profile
      */
-    public static record Profile(String name,
+    public static record Profile(String id,
                                  JsonObject parameters) {}
 }

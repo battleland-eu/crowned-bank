@@ -2,17 +2,27 @@ package eu.battleland.crownedbank.paper;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.CurrencyRepository;
-import eu.battleland.crownedbank.helper.Handler;
+import eu.battleland.crownedbank.RemoteRepository;
+import eu.battleland.crownedbank.config.GlobalConfig;
 import eu.battleland.crownedbank.model.Account;
+import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.remote.ProxyRemote;
+import eu.battleland.crownedbank.remote.DatabaseRemote;
 import eu.battleland.crownedbank.remote.Remote;
+import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
+import lombok.Setter;
+import lombok.extern.log4j.Log4j2;
+import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
 import org.apache.commons.lang3.Validate;
 import org.bukkit.event.Listener;
 import org.jetbrains.annotations.NotNull;
 import org.spigotmc.SpigotConfig;
 
+import java.awt.print.Paper;
+import java.io.File;
+import java.io.InputStream;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -20,52 +30,32 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Paper implementation of the CrownedBankAPI.
  */
+@Log4j2
 public class PaperCrownedBank
-        implements CrownedBankAPI, Listener {
+        extends CrownedBankAPI.Base
+        implements Listener {
 
     @Getter
     private final Plugin plugin;
 
     @Getter
-    private Remote remote;
-
-    @Getter
     private final CurrencyRepository currencyRepository
             = new CurrencyRepository();
+    @Getter
+    private final RemoteRepository remoteRepository
+            = new RemoteRepository();
 
-    private final Map<Account.Identity, Account> cachedAccounts
-            = new ConcurrentHashMap<>();
-
+    /**
+     * Default constructor.
+     *
+     * @param plugin Plugin instance.
+     */
     public PaperCrownedBank(@NonNull Plugin plugin) {
         this.plugin = plugin;
         if (SpigotConfig.bungee) {
-            this.remote = new ProxyRemote(plugin);
+            this.setRemote(new ProxyRemote(plugin));
         } else {
 
         }
-    }
-
-    @Override
-    public Account createAccount(Account.@NotNull Identity identity) {
-        Validate.notNull(remote, "Remote not present");
-
-        return Account.builder()
-                .identity(identity)
-                .depositHandler(Handler.remoteDepositRelay(remote))
-                .withdrawHandler(Handler.remoteWithdrawRelay(remote))
-                .build();
-    }
-
-    @Override
-    public CompletableFuture<Account> retrieveAccount(Account.@NotNull Identity identity) {
-        Validate.notNull(remote, "Remote not present");
-
-        return CompletableFuture.supplyAsync(() -> {
-            if (this.cachedAccounts.containsKey(identity))
-                return this.cachedAccounts.get(identity);
-            final var account = createAccount(identity);
-            this.cachedAccounts.put(identity, account);
-            return account;
-        });
     }
 }

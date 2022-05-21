@@ -1,5 +1,8 @@
 plugins {
     id 'java'
+    id 'kr.entree.spigradle.bungee' version '2.4.2'
+    id 'com.github.johnrengelman.shadow' version '7.1.2'
+    id "io.freefair.lombok" version "6.3.0"
 }
 
 group 'eu.battleland.crownedbank'
@@ -13,5 +16,16 @@ repositories {
 }
 
 dependencies {
+    implementation(project(":api"))
+    implementation(project(":api-proxy"))
     compileOnly "net.md-5:bungeecord-api:1.18-R0.1-SNAPSHOT"
 }
+
+assemble {
+    dependsOn(shadowJar)
+}
+
+shadowJar {
+
+}
+

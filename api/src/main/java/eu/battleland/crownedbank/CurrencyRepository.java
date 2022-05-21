@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank;
 
 import com.google.common.collect.ImmutableSet;
+import eu.battleland.crownedbank.abstracted.Repository;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import lombok.NonNull;
@@ -12,35 +13,35 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * Currency repository.
  */
-public class CurrencyRepository {
-
-    private final Map<String, Currency> currencies
-            = new ConcurrentHashMap<>();
+public class CurrencyRepository
+    extends Repository<Currency> {
 
     /**
-     * @param identifier Currency identifier
-     * @return Nullable Currency
+     * Register currency.
+     * @param entry Currency.
      */
-    public Currency getCurrency(final String identifier) {
-        return this.currencies.get(identifier);
+    @Override
+    public void register(Currency entry) {
+        super.register(entry);
     }
 
     /**
-     * Registers currency.
-     *
-     * @param currency Currency
+     * Retrieve currency.
+     * @param id Identifier.
+     * @return Currency Instance.
      */
-    public void registerCurrency(final @NonNull Currency currency) {
-        this.currencies.put(currency.getIdentifier(), currency);
+    @Override
+    public Currency retrieve(String id) {
+        return super.retrieve(id);
     }
 
     /**
-     * @return Registered currencies
+     * @return All Currencies
      */
-    public ImmutableSet<Currency> getCurrencies() {
-        return ImmutableSet.<Currency>builder().addAll(currencies.values()).build();
+    @Override
+    public ImmutableSet<Currency> all() {
+        return super.all();
     }
-
 
     /**
      * Set major currency.

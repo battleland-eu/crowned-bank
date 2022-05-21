@@ -41,53 +41,60 @@ public class ProxyRemote
     public ProxyRemote(@NonNull JavaPlugin plugin) {
         this.plugin = plugin;
 
-
         // Register outgoing channel
         Bukkit.getServer().getMessenger()
                 .registerOutgoingPluginChannel(this.plugin, ProxyConstants.CHANNEL);
         // Register incoming channel listener
         Bukkit.getServer().getMessenger()
                 .registerIncomingPluginChannel(this.plugin, ProxyConstants.CHANNEL,
-                (channel, player, message) -> {
-                    if(channel.equals(ProxyConstants.CHANNEL))
-                        return;
-                    final var stream
-                            = ByteStreams.newDataInput(message);
-                    try {
-                        // read operation
-                        final var op = ProxyOperation
-                                .values()[stream.readByte()];
+                        (channel, player, message) -> {
+                            if (channel.equals(ProxyConstants.CHANNEL))
+                                return;
+                            final var stream
+                                    = ByteStreams.newDataInput(message);
+                            try {
+                                // read operation
+                                final var op = ProxyOperation
+                                        .values()[stream.readByte()];
 
-                        // read account identity
-                        final var identity = ProxyConstants.GSON
-                                .fromJson(stream.readUTF(), Account.Identity.class);
+                                // read account identity
+                                final var identity = ProxyConstants.GSON
+                                        .fromJson(stream.readUTF(), Account.Identity.class);
 
 
-                        switch (op) {
-                            case PROVIDE_RESPONSE -> {
-                                this.provideFutures.get(identity)
-                                        .complete(ProxyConstants.GSON.fromJson(stream.readUTF(), Account.class));
-                                log.info("Provided new account for '{}'", identity);
+                                switch (op) {
+                                    case PROVIDE_RESPONSE -> {
+                                        this.provideFutures.get(identity)
+                                                .complete(ProxyConstants.GSON.fromJson(stream.readUTF(), Account.class));
+                                        log.info("Provided new account for '{}'", identity);
+                                    }
+                                    case WITHDRAW_RESPONSE -> {
+                                        this.withdrawFutures.get(identity)
+                                                .complete(Pair.of(stream.readBoolean(), stream.readFloat()));
+                                        log.info("Withdraw from account '{}' completed.", identity);
+                                    }
+                                    case DEPOSIT_RESPONSE -> {
+                                        this.depositFutures.get(identity)
+                                                .complete(Pair.of(stream.readBoolean(), stream.readFloat()));
+                                        log.info("Deposit to account '{}' completed.", identity);
+                                    }
+                                }
+                            } catch (Exception ignored) {
+
                             }
-                            case WITHDRAW_RESPONSE -> {
-                                this.withdrawFutures.get(identity)
-                                        .complete(Pair.of(stream.readBoolean(), stream.readFloat()));
-                                log.info("Withdraw from account '{}' completed.", identity);
-                            }
-                            case DEPOSIT_RESPONSE -> {
-                                this.depositFutures.get(identity)
-                                        .complete(Pair.of(stream.readBoolean(), stream.readFloat()));
-                                log.info("Deposit to account '{}' completed.", identity);
-                            }
-                        }
-                    } catch (Exception ignored) {
+                        });
+    }
 
-                    }
-                });
+    @Override
+    public @NonNull String identifier() {
+        return "proxy";
     }
 
     @Override
     public void configure(@NonNull Profile profile) {
+        if(!profile.parameters().has("tolerated_address"))
+            return;
+
         final var address = profile.parameters()
                 .getAsJsonPrimitive("tolerated_address")
                 .getAsString();
@@ -112,8 +119,8 @@ public class ProxyRemote
         {
             final var data = ByteStreams.newDataOutput();
             data.writeByte(ProxyOperation.PROVIDE_REQUEST.ordinal());
-            Bukkit.getServer()
-                    .sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            data.writeUTF(ProxyConstants.GSON.toJson(identity));
+            Bukkit.getServer().sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
         }
 
         return future;

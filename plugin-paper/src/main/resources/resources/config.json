@@ -1,31 +1,39 @@
 {
-  "remotes": {
-    "network": {
-      "tolerated_address": "127.0.0.1"
+  "remotes": [
+    {
+      "id": "database",
+      "parameters": {
+        "jdbcUrl": "jdbc:mysql://localhost:3306/test",
+        "username": "root",
+        "password": "",
+        "poolSize": 10
+      }
     },
-    "mysql": {
-      "properties": "{DATA_FOLDER}/databases/sql_database.properties"
-    },
-    "mongo": {
-      "properties": "{DATA_FOLDER}/databases/mongo_database.properties"
+    {
+      "id": "proxy",
+      "parameters": {}
     }
-  },
-  "default_remote": "network",
-
+  ],
   "currencies": [
     {
       "id": "coins",
-      "namePlural": {"text": "Coins"},
-      "nameSingular": {"text": "Coin"},
-      "format": "%.2f",
-      "remote": "mysql"
+      "namePlural": {
+        "text": "Coins"
+      },
+      "nameSingular": {
+        "text": "Coin"
+      },
+      "format": "%.2f"
     },
     {
       "id": "tokens",
-      "namePlural": {"text": "Tokens"},
-      "nameSingular": {"text": "Token"},
-      "format": "%.2f",
-      "remote": "network"
+      "namePlural": {
+        "text": "Tokens"
+      },
+      "nameSingular": {
+        "text": "Token"
+      },
+      "format": "%.2f"
     }
   ],
   "major_currency": "coins",

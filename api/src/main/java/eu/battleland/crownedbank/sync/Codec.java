@@ -27,8 +27,8 @@ public class Codec {
         encoded.addProperty("identity", account.getIdentity().toString());
         {
             final var currencies = new JsonObject();
-            currencyRepository.getCurrencies().forEach((currency) -> {
-                currencies.addProperty(currency.getIdentifier(), account.status(currency));
+            currencyRepository.all().forEach((currency) -> {
+                currencies.addProperty(currency.identifier(), account.status(currency));
             });
             encoded.add("currencies", currencies);
         }
@@ -49,7 +49,7 @@ public class Codec {
         final Map<Currency, Float> currencyMap = new HashMap<>();
         currencies.keySet().forEach(currencyId -> {
             final var currency
-                    = currencyRepository.getCurrency(currencyId);
+                    = currencyRepository.retrieve(currencyId);
             final var amount = currencies.getAsJsonPrimitive(currencyId)
                     .getAsFloat();
             currencyMap.put(currency, amount);

@@ -1,5 +1,6 @@
 package eu.battleland.crownedbank.model;
 
+import eu.battleland.crownedbank.abstracted.Identifiable;
 import eu.battleland.crownedbank.remote.Remote;
 import lombok.Builder;
 import lombok.Getter;
@@ -12,7 +13,8 @@ import java.util.Objects;
  * Represents currency.
  */
 @Builder
-public class Currency {
+public class Currency
+    implements Identifiable {
 
     /**
      * Major currency to be used.
@@ -23,8 +25,6 @@ public class Currency {
      */
     public static @NonNull Currency minorCurrency;
 
-
-    @Getter
     private String identifier;
 
     @Getter
@@ -37,6 +37,11 @@ public class Currency {
 
     @Getter
     private Remote remote;
+
+    @Override
+    public @NonNull String identifier() {
+        return this.identifier;
+    }
 
     /**
      * Compare this instance with instance {@code o} or compare identifiers.
