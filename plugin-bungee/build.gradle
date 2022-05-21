@@ -1,0 +1,17 @@
+plugins {
+    id 'java'
+}
+
+group 'eu.battleland.crownedbank'
+version '1.0-dev'
+
+repositories {
+    mavenCentral()
+    maven{
+        url = "https://oss.sonatype.org/content/repositories/snapshots"
+    }
+}
+
+dependencies {
+    compileOnly "net.md-5:bungeecord-api:1.18-R0.1-SNAPSHOT"
+}

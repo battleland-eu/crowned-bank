@@ -1,0 +1,14 @@
+pluginManagement {
+    repositories {
+        gradlePluginPortal()
+        maven{url = "https://papermc.io/repo/repository/maven-public/"}
+    }
+}
+
+rootProject.name = 'crowned-bank'
+include 'api'
+include 'plugin-paper'
+include 'plugin-bungee'
+include 'plugin-velocity'
+include 'api-proxy'
+

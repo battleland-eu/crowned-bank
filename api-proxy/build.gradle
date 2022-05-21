@@ -1,0 +1,14 @@
+plugins {
+    id 'java'
+}
+
+group 'eu.battleland.crownedbank'
+version '1.0-dev'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    implementation 'com.google.code.gson:gson:2.8.9'
+}

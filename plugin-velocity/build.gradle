@@ -1,0 +1,19 @@
+plugins {
+    id 'java'
+}
+
+group 'eu.battleland.crownedbank'
+version '1.0-dev'
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.7.2'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.7.2'
+}
+
+test {
+    useJUnitPlatform()
+}
