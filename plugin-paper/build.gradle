@@ -32,7 +32,7 @@ tasks.named("build") { dependsOn(tasks.named("shadowJar")) }
 
 bukkit {
     main = "eu.battleland.crownedbank.paper.BankPlugin"
-    name = "CrownedBank Paper"
+    name = "CrownedBankPaper"
     apiVersion = "1.18"
 }
 

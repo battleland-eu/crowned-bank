@@ -37,7 +37,7 @@ shadowJar {
 tasks.named("build") { dependsOn(tasks.named("shadowJar")) }
 
 bungee {
-    name = "CrownedBank Bungee"
+    name = "CrownedBankBungee"
     description = 'CrownedBank Bungee implementation'
     author = 'rgnt.xyz'
 }
