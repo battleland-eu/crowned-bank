@@ -1,6 +1,6 @@
 package eu.battleland.crownedbank;
 
-import eu.battleland.crownedbank.helper.Handler;
+import eu.battleland.crownedbank.helper.TransactionHandler;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Logger;
 
 /**
  * Crowned Bank API
@@ -101,8 +100,8 @@ public interface CrownedBankAPI {
         public Account account(@NonNull Account.Identity identity) {
             return Account.builder()
                     .identity(identity)
-                    .depositHandler(Handler.remoteDepositRelay(this.remote))
-                    .withdrawHandler(Handler.remoteWithdrawRelay(this.remote))
+                    .depositHandler(TransactionHandler.remoteDepositRelay(this.remote))
+                    .withdrawHandler(TransactionHandler.remoteWithdrawRelay(this.remote))
                     .build();
         }
 

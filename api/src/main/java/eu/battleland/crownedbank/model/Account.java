@@ -1,16 +1,15 @@
 package eu.battleland.crownedbank.model;
 
 import eu.battleland.crownedbank.CrownedBankConstants;
-import eu.battleland.crownedbank.helper.Pair;
-import eu.battleland.crownedbank.helper.TriFunction;
+import eu.battleland.crownedbank.helper.TransactionHandler;
 import lombok.Builder;
 import lombok.Getter;
 import org.jetbrains.annotations.Nullable;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
+import java.util.concurrent.Callable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
@@ -30,30 +29,11 @@ public class Account {
     private final Map<Currency, Float> currencies
             = new ConcurrentHashMap<>();
 
-    /**
-     * param Currency - Currency to withdraw.<br>
-     * param Float    - Amount to withdraw.<br>
-     * param Account  - Account reference.
-     * ret   Boolean, Float  - Whether the operation was successful & new currency amount<br><br>
-     * <p>
-     * Withdraw handler.
-     * Returns true if withdrawal from account was successful, otherwise returns false.
-     */
     @Builder.Default
-    private transient TriFunction<Currency, Float, Account, Pair<Boolean, Float>> withdrawHandler = null;
+    private transient TransactionHandler withdrawHandler = null;
 
-    /**
-     * param Currency - Currency to deposit.<br>
-     * param Float    - Amount to deposit.<br>
-     * param Account  - Account reference.
-     * ret   Boolean, Float  - Whether the operation was successful & new currency amount<br><br>
-     * <p>
-     * Deposit handler.
-     * Returns true if deposit to account was successful,
-     * otherwise returns false.
-     */
     @Builder.Default
-    private transient TriFunction<Currency, Float, Account, Pair<Boolean, Float>> depositHandler = null;
+    private transient TransactionHandler depositHandler = null;
 
     /**
      * @return Boolean true if account is dummy.
@@ -61,6 +41,7 @@ public class Account {
     public boolean isDummy() {
         return withdrawHandler == null || depositHandler == null;
     }
+
 
     /**
      * Withdraws currency from account.
@@ -71,31 +52,18 @@ public class Account {
      */
     public CompletableFuture<Boolean> withdraw(final Currency currency,
                                                float amount) {
-        if(isDummy())
+        if (isDummy())
             return CompletableFuture.completedFuture(false);
 
-        return CompletableFuture.supplyAsync(() -> {
-            synchronized (this) {
-                try {
-                    // ask withdraw handler if we can withdraw from this account.
-                    final var result = this.withdrawHandler.apply(currency, amount, this);
-                    if (!result.getFirst()) {
-                        logger.info(String.format(
-                                "Failed to withdraw '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
-                        ));
-                        return false;
-                    }
-                    logger.info(String.format(
-                            "Successfully withdrawn '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
-                    ));
-                    this.currencies.put(currency, result.getSecond());
-                    return true;
-                } catch (Exception x) {
-                    x.printStackTrace();
-                    return false;
-                }
-            }
-        });
+        return CompletableFuture.supplyAsync(() -> this.transaction(this.withdrawHandler, currency, amount, () -> {
+            logger.info(String.format(
+                    "Successfully withdrawn '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
+            ));
+        }, () -> {
+            logger.info(String.format(
+                    "Failed to withdraw '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
+            ));
+        }));
     }
 
     /**
@@ -108,33 +76,50 @@ public class Account {
 
     public CompletableFuture<Boolean> deposit(final Currency currency,
                                               float amount) {
-        if(isDummy())
+        if (isDummy())
             return CompletableFuture.completedFuture(false);
 
-        return CompletableFuture.supplyAsync(() -> {
-            synchronized (this) {
-                try {
-                    // ask deposit handler if we can deposit to this account.
-                    final var result = this.depositHandler.apply(currency, amount, this);
-                    if (!result.getFirst()) {
-                        logger.info(String.format(
-                                "Failed to deposit '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
-                        ));
-                        return false;
-                    }
-                    logger.info(String.format(
-                            "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
-                    ));
-                    this.currencies.put(currency, result.getSecond());
-                    return true;
-                } catch (Exception x) {
-                    x.printStackTrace();
-                    return false;
-                }
-            }
-        });
+        return CompletableFuture.supplyAsync(() -> this.transaction(this.depositHandler, currency, amount, () -> {
+            logger.info(String.format(
+                    "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
+            ));
+        }, () -> {
+            logger.info(String.format(
+                    "Failed to deposit '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
+            ));
+        }));
     }
 
+
+    private synchronized boolean transaction(final TransactionHandler handler,
+                                             final Currency currency,
+                                             final float amount,
+                                             Runnable onSuccess,
+                                             Runnable onFailure) {
+        // post handler, should be completed after transaction is over.
+        // remote is then notified that we processed its response, and it can trigger some actions... ie. saving data
+        final var postHandler = new CompletableFuture<Void>();
+        try {
+            // call transaction handler
+            final var result = handler.handle(currency, amount, this, postHandler);
+            if (result.getFirst()) {
+                // transaction accepted
+                onSuccess.run();
+                this.currencies.put(currency, result.getSecond());
+                return true;
+            } else {
+                // transaction not accepted
+                onFailure.run();
+                return false;
+            }
+        } catch (Exception x) {
+            x.printStackTrace();
+            return false;
+        } finally {
+            // complete post handler
+            postHandler.complete(null);
+        }
+    }
 
     /**
      * @param currency Currency
@@ -146,11 +131,12 @@ public class Account {
 
     /**
      * Feed from other account.
+     *
      * @param other Other Account.
      * @return This.
      */
     public Account feedFromDummy(@Nullable Account other) {
-        if(other != null && other.currencies != null)
+        if (other != null && other.currencies != null)
             this.currencies.putAll(other.currencies);
         return this;
     }

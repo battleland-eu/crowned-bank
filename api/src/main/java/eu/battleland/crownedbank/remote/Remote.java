@@ -11,6 +11,9 @@ import org.jetbrains.annotations.Nullable;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+/**
+ * Remote. Stores, retrieves accounts. Handles transactions of remote accounts.
+ */
 public interface Remote
         extends Identifiable {
 
@@ -46,17 +49,21 @@ public interface Remote
      * Handle account withdraw.
      * @param account Account.
      * @param amount  Amount to withdraw.
+     * @param post    Future which completes when withdraw completes.
      * @return Boolean true if withdraw from account was successful & new account status.
      */
-    CompletableFuture<Pair<Boolean, Float>> handleWithdraw(final Account account, final Currency currency, float amount);
+    CompletableFuture<Pair<Boolean, Float>> handleWithdraw(final Account account, final Currency currency, float amount,
+                                                           CompletableFuture<Void> post);
 
     /**
      * Handle account deposit.
      * @param account Account.
      * @param amount  Amount to deposit.
+     * @param post    Future which completes when deposit completes.
      * @return Boolean true if deposit to account was successful & new account status.
      */
-    CompletableFuture<Pair<Boolean, Float>> handleDeposit(final Account account, final Currency currency, float amount);
+    CompletableFuture<Pair<Boolean, Float>> handleDeposit(final Account account, final Currency currency, float amount,
+                                                          CompletableFuture<Void> post);
 
     /**
      * Remote profile
