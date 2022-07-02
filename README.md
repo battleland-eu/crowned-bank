@@ -1,5 +1,5 @@
 # crowned-bank
-A proper implementation of economy plugin both for networks and singles. 
+A proper implementation of economy plugin both for networks and standalone servers. 
 
 ## Implementation
 Can communicate via multiple remotes at the same time. 
