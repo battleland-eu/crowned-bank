@@ -1,7 +1,3 @@
-plugins {
-    id("java")
-}
-
 group 'eu.battleland.crownedbank'
 version '1.0-dev'
 

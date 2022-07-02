@@ -6,15 +6,7 @@ A proper implementation of economy plugin both for networks and standalone serve
 **Proxy**-**Server** communication is done with plugin messaging,to maintain it's reliability and compatibility with most proxies,
 without having to open any new insecure network ports. 
 
-## Capabilities
-### Supported Plug-Ins 
-- PlaceholderAPI (spigot)
-- Vault (spigot)
-### Supported Platforms
-- PaperMC 
-- BungeeCord
-- Velocity
-### Supported 
+## Users
 
 ## Developers
 ### How does it work?
@@ -31,6 +23,15 @@ Read more on wiki.
 #### Gradle (Kotlin DSL)
 ```xml
 ```
+
+## Capabilities
+### Supported Plug-Ins
+- PlaceholderAPI (spigot)
+- Vault (spigot)
+### Supported Platforms
+- PaperMC
+- BungeeCord
+- Velocity
 
 ## Licensing
 Project is distrubuted under [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/#).

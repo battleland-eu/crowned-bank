@@ -32,6 +32,8 @@ shadowJar {
     archiveFileName = "crownedbank-bungee.jar"
 }
 
+tasks.named("build") { dependsOn(tasks.named("shadowJar")) }
+
 bungee {
     name = "CrownedBank Bungee"
     description = 'CrownedBank Bungee implementation'

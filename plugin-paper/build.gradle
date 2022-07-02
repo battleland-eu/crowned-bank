@@ -26,6 +26,7 @@ dependencies {
 shadowJar {
     archiveFileName = "crownedbank-paper.jar"
 }
+tasks.named("build") { dependsOn(tasks.named("shadowJar")) }
 
 bukkit {
     main = "eu.battleland.crownedbank.paper.BankPlugin"
