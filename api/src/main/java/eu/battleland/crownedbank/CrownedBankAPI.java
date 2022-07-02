@@ -15,7 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
+import java.util.logging.Logger;
 
 /**
  * Crowned Bank API
@@ -29,13 +29,13 @@ public interface CrownedBankAPI {
      * @param identity Identity.
      * @return Account.
      */
-    Account dummyAccount(@NonNull Account.Identity identity);
+    Account account(@NonNull Account.Identity identity);
 
     /**
      * Retrieves account for identity.
      *
      * @param identity Identity.
-     * @return Future of account. May be from cache, or remote.
+     * @return Future of dummy account. May be from cache, or remote.
      */
     CompletableFuture<Account> retrieveAccount(@NonNull Account.Identity identity);
 
@@ -43,7 +43,7 @@ public interface CrownedBankAPI {
      * Retrieves wealthy accounts.
      *
      * @param currency Currency.
-     * @return Future list of accounts. May be from cache, or remote.
+     * @return Future list of dummy accounts. May be from cache, or remote.
      */
     CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency);
 
@@ -98,7 +98,7 @@ public interface CrownedBankAPI {
 
 
         @Override
-        public Account dummyAccount(@NonNull Account.Identity identity) {
+        public Account account(@NonNull Account.Identity identity) {
             return Account.builder()
                     .identity(identity)
                     .depositHandler(Handler.remoteDepositRelay(this.remote))
@@ -125,29 +125,29 @@ public interface CrownedBankAPI {
 
                 // fetch account from remote
                 final var future = CompletableFuture.supplyAsync(() -> {
-                    Account account = null;
+                    Account dummyAccount = null;
                     try {
                         final var fetchFuture = this.remote.fetchAccount(identity);
 
                         try {
-                            account = fetchFuture.get();
-                        } catch (Exception ignored) {
+                            dummyAccount = fetchFuture.get(); // fetch dummy
+                        } catch (Exception x) {
+                            x.printStackTrace();
                         }
 
-                        if ((!fetchFuture.isCompletedExceptionally()) && account == null) {
-                            // create new account
-                            // future has returned null, and it has not thrown exception
-                            account = dummyAccount(identity);
-                            this.remote.storeAccount(account);
-                        }
+                        if(fetchFuture.isCompletedExceptionally())
+                            return null; // exception occurred when fetching user, they might have an account...
 
-                        if (account != null) {
-                            // cache account
-                            this.cachedAccounts.put(identity, account);
-                        }
+                        Account liveAccount = account(identity);
+                        if (dummyAccount == null)
+                            this.remote.storeAccount(liveAccount); // create new account for user
+                        else
+                            liveAccount.feedFromDummy(dummyAccount); // feed from existing dummy account
+
+                        this.cachedAccounts.put(identity, liveAccount);
 
                         // supply account
-                        return account;
+                        return liveAccount;
                     } catch (Exception e) {
                         e.printStackTrace();
                         return null;
@@ -167,8 +167,7 @@ public interface CrownedBankAPI {
         @Override
         public CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency) {
             final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBankConstants.getWealthyCheckMillis()
-                    || !this.wealthyAccounts.containsKey(currency); // trigger check if outdated or not present.
-
+                    || !this.wealthyAccounts.containsKey(currency); // trigger check if outdated or not present
             if (!triggerCheck)
                 return CompletableFuture.completedFuture(this.wealthyAccounts.get(currency));
 
@@ -182,6 +181,7 @@ public interface CrownedBankAPI {
 
                         this.wealthyAccounts.put(currency, result);
                         this.wealthyAccountsFuture = null;
+                        this.lastWealthCheck = System.currentTimeMillis();
 
                         return result;
                     } catch (Exception e) {

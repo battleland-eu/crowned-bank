@@ -18,6 +18,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +39,7 @@ public class ProxyRemote
 
     private final Map<Account.Identity, CompletableFuture<Account>> fetchFutures
             = new ConcurrentHashMap<>();
+    private CompletableFuture<List<Account>> fetchWealthyFuture;
 
     @Getter
     private boolean acceptConfiguration = true;
@@ -67,61 +70,81 @@ public class ProxyRemote
                 // read operation
                 final var op = ProxyOperation
                         .values()[stream.readByte()];
-                // read account identity
-                final var identity = CrownedBankConstants.GSON
-                        .fromJson(stream.readUTF(), Account.Identity.class);
 
-                switch (op) {
-                    case FETCH_RESPONSE -> {
-                        final var future
-                                = this.fetchFutures.get(identity);
-                        if(future == null) {
-                            log.warn("Fetch response for '{}' received but not expected.", identity);
-                            return;
-                        }
-
-                        final var response = stream.readUTF();
-
-                        if (response.length() == 0 || response.equals("null")) {
-                            future.complete(null);
-                            log.error("Fetched null account '{}'", identity);
-                        } else {
-                            // create account, and feed it data from proxy.
-                            final var account = plugin.getApi().dummyAccount(identity)
-                                    .feed(CrownedBankConstants.GSON.fromJson(response, Account.class));
-                            future.complete(account);
-                            log.info("Fetched account for '{}'", identity);
-                        }
+                if(op == ProxyOperation.FETCH_WEALTHY_RESPONSE) {
+                    if(fetchWealthyFuture == null) {
+                        log.warn("Fetch wealthy response received, but not expected.");
+                        return;
                     }
-                    case WITHDRAW_RESPONSE -> {
-                        final var withdrawFuture = this.withdrawFutures.get(identity);
-                        final var data = Pair.of(
-                                stream.readBoolean(),
-                                stream.readFloat()
-                        );
-                        if(withdrawFuture == null) {
-                            log.warn("Withdraw response for '{}' received but not expected. ({};{})",
-                                    identity, data.getFirst(), data.getSecond()
-                            );
-                            return;
-                        }
-                        withdrawFuture.complete(data);
-                        log.info("Withdraw from account '{}' completed.", identity);
+
+                    int count = stream.readInt();
+                    final List<Account> accounts = new ArrayList<>(count);
+
+                    for (int i = 0; i < count; i++) {
+                        accounts.add(CrownedBankConstants.GSON.fromJson(stream.readUTF(), Account.class));
                     }
-                    case DEPOSIT_RESPONSE -> {
-                        final var depositFuture = this.depositFutures.get(identity);
-                        final var data = Pair.of(
-                                stream.readBoolean(),
-                                stream.readFloat()
-                        );
-                        if(depositFuture == null) {
-                            log.warn("Deposit response for '{}' received but not expected. ({};{})",
-                                    identity, data.getFirst(), data.getSecond()
-                            );
-                            return;
+                    fetchWealthyFuture.complete(accounts);
+                    fetchWealthyFuture = null;
+
+                    log.info("Fetched wealthy accounts");
+                } else {
+
+                    // read account identity
+                    final var identity = CrownedBankConstants.GSON
+                            .fromJson(stream.readUTF(), Account.Identity.class);
+
+                    switch (op) {
+                        case FETCH_RESPONSE -> {
+                            final var future
+                                    = this.fetchFutures.remove(identity);
+                            if(future == null) {
+                                log.warn("Fetch response for '{}' received, but not expected.", identity);
+                                return;
+                            }
+
+                            final var response = stream.readUTF();
+
+                            if (response.length() == 0 || response.equals("null")) {
+                                future.complete(null);
+                                log.error("Fetched null account '{}'", identity);
+                            } else {
+                                final var account
+                                        = CrownedBankConstants.GSON.fromJson(response, Account.class);
+
+                                future.complete(account);
+                                log.info("Fetched account for '{}'", identity);
+                            }
                         }
-                        depositFuture.complete(data);
-                        log.info("Deposit to account '{}' completed.", identity);
+                        case WITHDRAW_RESPONSE -> {
+                            final var withdrawFuture = this.withdrawFutures.remove(identity);
+                            final var data = Pair.of(
+                                    stream.readBoolean(),
+                                    stream.readFloat()
+                            );
+                            if(withdrawFuture == null) {
+                                log.warn("Withdraw response for '{}' received but not expected. ({};{})",
+                                        identity, data.getFirst(), data.getSecond()
+                                );
+                                return;
+                            }
+                            withdrawFuture.complete(data);
+                            log.info("Withdraw from account '{}' completed.", identity);
+                        }
+                        case DEPOSIT_RESPONSE -> {
+                            final var depositFuture = this.depositFutures.remove(identity);
+                            final var data = Pair.of(
+                                    stream.readBoolean(),
+                                    stream.readFloat()
+                            );
+                            if(depositFuture == null) {
+                                log.warn("Deposit response for '{}' received but not expected. ({};{})",
+                                        identity, data.getFirst(), data.getSecond()
+                                );
+                                return;
+                            }
+                            depositFuture.complete(data);
+                            log.info("Deposit to account '{}' completed.", identity);
+                        }
                     }
                 }
             } catch (Exception x) {
@@ -172,6 +195,29 @@ public class ProxyRemote
             data.writeUTF(ProxyConstants.SUB_CHANNEL);
             data.writeByte(ProxyOperation.FETCH_REQUEST.ordinal());
             data.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+            Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
+                player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            }, () -> {
+                log.error("There's nobody online. I can't send message through to proxy.");
+            });
+        }
+
+        return future.orTimeout(10, TimeUnit.SECONDS);
+    }
+
+    @Override
+    public CompletableFuture<List<Account>> fetchWealthyAccounts(@NonNull Currency currency) {
+        final var future = new CompletableFuture<List<Account>>();
+        this.fetchWealthyFuture = future;
+
+        // request account from proxy
+        {
+            final var data = ByteStreams.newDataOutput();
+            data.writeUTF(ProxyConstants.SUB_CHANNEL);
+            data.writeByte(ProxyOperation.FETCH_WEALTHY_REQUEST.ordinal());
+
+            data.writeUTF(currency.identifier());
+
             Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
                 player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
             }, () -> {

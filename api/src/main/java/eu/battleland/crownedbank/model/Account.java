@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
 @Builder
@@ -26,8 +27,8 @@ public class Account {
      * Cached currencies held by account.
      */
     @Builder.Default
-    private Map<Currency, Float> currencies
-            = new HashMap<>();
+    private final Map<Currency, Float> currencies
+            = new ConcurrentHashMap<>();
 
     /**
      * param Currency - Currency to withdraw.<br>
@@ -38,7 +39,8 @@ public class Account {
      * Withdraw handler.
      * Returns true if withdrawal from account was successful, otherwise returns false.
      */
-    private transient final TriFunction<Currency, Float, Account, Pair<Boolean, Float>> withdrawHandler;
+    @Builder.Default
+    private transient TriFunction<Currency, Float, Account, Pair<Boolean, Float>> withdrawHandler = null;
 
     /**
      * param Currency - Currency to deposit.<br>
@@ -50,7 +52,15 @@ public class Account {
      * Returns true if deposit to account was successful,
      * otherwise returns false.
      */
-    private transient final TriFunction<Currency, Float, Account, Pair<Boolean, Float>> depositHandler;
+    @Builder.Default
+    private transient TriFunction<Currency, Float, Account, Pair<Boolean, Float>> depositHandler = null;
+
+    /**
+     * @return Boolean true if account is dummy.
+     */
+    public boolean isDummy() {
+        return withdrawHandler == null || depositHandler == null;
+    }
 
     /**
      * Withdraws currency from account.
@@ -61,6 +71,9 @@ public class Account {
      */
     public CompletableFuture<Boolean> withdraw(final Currency currency,
                                                float amount) {
+        if(isDummy())
+            return CompletableFuture.completedFuture(false);
+
         return CompletableFuture.supplyAsync(() -> {
             synchronized (this) {
                 try {
@@ -95,6 +108,9 @@ public class Account {
 
     public CompletableFuture<Boolean> deposit(final Currency currency,
                                               float amount) {
+        if(isDummy())
+            return CompletableFuture.completedFuture(false);
+
         return CompletableFuture.supplyAsync(() -> {
             synchronized (this) {
                 try {
@@ -133,7 +149,7 @@ public class Account {
      * @param other Other Account.
      * @return This.
      */
-    public Account feed(@Nullable Account other) {
+    public Account feedFromDummy(@Nullable Account other) {
         if(other != null && other.currencies != null)
             this.currencies.putAll(other.currencies);
         return this;
