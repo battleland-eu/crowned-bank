@@ -5,13 +5,12 @@
 # This workflow will build a package using Gradle and then publish it to GitHub packages when a release is created
 # For more information see: https://github.com/actions/setup-java/blob/main/docs/advanced-usage.md#Publishing-using-gradle
 
-name: Publish to GitHub Packages
+name: Publish
 
 on:
   push:
     branches:
     - master
-    -
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,16 +19,13 @@ jobs:
       packages: write
     steps:
     - uses: actions/checkout@v3
-
     - name: Setup
       run: chmod +x ./gradlew
-
     - name: Setup JDK
       uses: actions/setup-java@v3
       with:
         java-version: '17'
         distribution: 'temurin'
-
     - name: Validate Gradle wrapper
       uses: gradle/wrapper-validation-action@e6e38bacfdf1a337459f332974bb2327a31aaf4b
     - name: Publish package
@@ -37,4 +33,5 @@ jobs:
       with:
         arguments: publish
       env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        NEXUS_USERNAME: ${{ secrets.NEXUS_USERNAME }}
+        NEXUS_PASSWORD: ${{ secrets.NEXUS_PASSWORD }}

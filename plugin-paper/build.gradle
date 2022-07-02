@@ -5,6 +5,8 @@ plugins {
     id("net.minecrell.plugin-yml.bukkit") version "0.5.1"
     id 'com.github.johnrengelman.shadow' version '7.1.2'
     id "io.freefair.lombok" version "6.3.0"
+
+    id "maven-publish"
 }
 
 group 'eu.battleland.crownedbank'
@@ -32,4 +34,25 @@ bukkit {
     main = "eu.battleland.crownedbank.paper.BankPlugin"
     name = "CrownedBank Paper"
     apiVersion = "1.18"
+}
+
+publishing {
+    publications {
+        gpr(MavenPublication) {
+            artifactId = 'crowned-bank-paper'
+            from components.java
+        }
+    }
+    publishing {
+        repositories {
+            maven {
+                name = "central"
+                url = uri("https://nexus.battleland.eu/repository/central/")
+                credentials {
+                    username = System.getenv("NEXUS_USERNAME")
+                    password = System.getenv("NEXUS_PASSWORD")
+                }
+            }
+        }
+    }
 }

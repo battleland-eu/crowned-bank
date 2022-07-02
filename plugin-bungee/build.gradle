@@ -3,6 +3,8 @@ plugins {
     id 'kr.entree.spigradle.bungee' version '2.4.2'
     id 'com.github.johnrengelman.shadow' version '7.1.2'
     id "io.freefair.lombok" version "6.3.0"
+
+    id "maven-publish"
 }
 
 group 'eu.battleland.crownedbank'
@@ -38,4 +40,25 @@ bungee {
     name = "CrownedBank Bungee"
     description = 'CrownedBank Bungee implementation'
     author = 'rgnt.xyz'
+}
+
+publishing {
+    publications {
+        gpr(MavenPublication) {
+            artifactId = 'crowned-bank-bungee'
+            from components.java
+        }
+    }
+    publishing {
+        repositories {
+            maven {
+                name = "central"
+                url = uri("https://nexus.battleland.eu/repository/central/")
+                credentials {
+                    username = System.getenv("NEXUS_USERNAME")
+                    password = System.getenv("NEXUS_PASSWORD")
+                }
+            }
+        }
+    }
 }

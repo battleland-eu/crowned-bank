@@ -42,26 +42,27 @@ dependencies {
     testImplementation('mysql:mysql-connector-java:8.0.28')
 }
 
-publishing {
-    repositories {
-        maven {
-            name = "github"
-            url = uri("https://maven.pkg.github.com/battleland-eu/crowned-bank")
-            credentials {
-                username = System.getenv("GITHUB_ACTOR")
-                password = System.getenv("GITHUB_TOKEN")
-            }
-        }
-    }
+test {
+    useJUnitPlatform()
+}
 
+publishing {
     publications {
         gpr(MavenPublication) {
             artifactId = 'crowned-bank-api'
             from components.java
         }
     }
-}
-
-test {
-    useJUnitPlatform()
+    publishing {
+        repositories {
+            maven {
+                name = "central"
+                url = uri("https://nexus.battleland.eu/repository/central/")
+                credentials {
+                    username = System.getenv("NEXUS_USERNAME")
+                    password = System.getenv("NEXUS_PASSWORD")
+                }
+            }
+        }
+    }
 }
