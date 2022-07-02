@@ -50,7 +50,10 @@ public class CrownedBankConstants {
 
     @Getter
     @Setter
-    private static long wealthCheckMillis = 5 * 60 * 1000;
+    private static int wealthyCheckAccountLimit = 25;
+    @Getter
+    @Setter
+    private static long wealthyCheckMillis = 5 * 60 * 1000;
 
 
     // https://github.com/google/gson/issues/1794

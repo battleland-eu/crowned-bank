@@ -70,8 +70,7 @@ public class BankPlugin
             log.info("Registered bukkit service.");
         }
 
-        // test command
-        Bukkit.getServer().getCommandMap().register("test", new Command("test") {
+        Bukkit.getServer().getCommandMap().register("test", new Command("test_deposit") {
             @Override
             public boolean execute(@NotNull CommandSender sender,
                                    @NotNull String commandLabel,
@@ -88,7 +87,7 @@ public class BankPlugin
                 // Retrieve account
                 bank.retrieveAccount(PlayerIdentity.of(player)).thenAccept((account) -> {
                     // Deposit currency
-                    account.deposit(Currency.majorCurrency, 10f).thenAccept((accepted) -> {
+                    account.deposit(Currency.majorCurrency, Float.parseFloat(args[0])).thenAccept((accepted) -> {
                         player.sendMessage(accepted
                                 ? Component.text("Successfully deposited money to your account")
                                 : Component.text("Failed to deposit money to your account")
@@ -98,7 +97,64 @@ public class BankPlugin
                 return true;
             }
         });
-        Bukkit.getPlayer("WattMann").setOp(true);
+
+        Bukkit.getServer().getCommandMap().register("test", new Command("test_withdraw") {
+            @Override
+            public boolean execute(@NotNull CommandSender sender,
+                                   @NotNull String commandLabel,
+                                   @NotNull String[] args) {
+                final var player = (Player) sender;
+
+                // Retrieve bank API
+                final var bank = Bukkit
+                        .getServicesManager()
+                        .load(CrownedBankAPI.class);
+                if(bank == null)
+                    return true;
+
+                // Retrieve account
+                bank.retrieveAccount(PlayerIdentity.of(player)).thenAccept((account) -> {
+                    // Deposit currency
+                    account.withdraw(Currency.majorCurrency, Float.parseFloat(args[0])).thenAccept((accepted) -> {
+                        player.sendMessage(accepted
+                                ? Component.text("Successfully withdrawn money from your account")
+                                : Component.text("Failed to withdraw money from your account")
+                        );
+                    });
+                });
+                return true;
+            }
+        });
+
+        Bukkit.getServer().getCommandMap().register("test", new Command("test_baltop") {
+            @Override
+            public boolean execute(@NotNull CommandSender sender,
+                                   @NotNull String commandLabel,
+                                   @NotNull String[] args) {
+                final var player = (Player) sender;
+
+                // Retrieve bank API
+                final var bank = Bukkit
+                        .getServicesManager()
+                        .load(CrownedBankAPI.class);
+                if(bank == null)
+                    return true;
+
+                // Retrieve account
+                bank.retrieveWealthyAccounts(Currency.majorCurrency).thenAccept(result -> {
+                    for (int i = 0; i < result.size(); i++) {
+                        final var account = result.get(i);
+                        player.sendMessage(Component.text("#" + i)
+                                .append(Component.text(" - "))
+                                .append(Component.text(account.getIdentity().name()))
+                                .append(Component.text(" - "))
+                                .append(Component.text(account.status(Currency.majorCurrency))));
+                    }
+                });
+                return true;
+            }
+        });
+
     }
 
     @Override

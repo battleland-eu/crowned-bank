@@ -28,8 +28,8 @@ public class DatabaseRemote
               ( `identity_name` TEXT NOT NULL , `identity_uuid` TEXT NOT NULL , `json_data` TEXT NOT NULL , UNIQUE (`identity_name`), UNIQUE (`identity_uuid`));
             """;
     private String fetchWealthyCommand = """
-            select `identity_name`,`identity_uuid`, JSON_EXTRACT(`json_data`, '$.currencies.%2$s') as worth
-            from `%1$s_data` order by worth desc
+            select `identity_name`, `identity_uuid`, `json_data`, JSON_EXTRACT(`json_data`, '$.currencies.%2$s') as worth
+            from `%1$s_data` order by worth desc limit %3$d
             """;
     private String storeCommand = """
             insert into `%s_data` (`identity_name`,`identity_uuid`,`json_data`) values('%s','%s','%s')
@@ -129,7 +129,8 @@ public class DatabaseRemote
                  final var result = statement.executeQuery(
                          String.format(fetchWealthyCommand,
                                  tablePrefix,
-                                 currency.identifier()
+                                 currency.identifier(),
+                                 CrownedBankConstants.getWealthyCheckAccountLimit()
                          ))) {
                 final var list = new ArrayList<Account>();
                 if(result.getFetchSize() == 0)

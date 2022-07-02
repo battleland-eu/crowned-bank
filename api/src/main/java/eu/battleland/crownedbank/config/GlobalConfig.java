@@ -2,6 +2,7 @@ package eu.battleland.crownedbank.config;
 
 import com.google.gson.JsonParser;
 import eu.battleland.crownedbank.CrownedBankAPI;
+import eu.battleland.crownedbank.CrownedBankConstants;
 import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
@@ -107,6 +108,15 @@ public abstract class GlobalConfig
                     api.getCurrencyRepository().setMinorCurrency(
                             minorCurrency
                     );
+                }
+
+                {
+                    final var limit = root.getAsJsonPrimitive("wealth_check_account_limit");
+                    final var timer = root.getAsJsonPrimitive("wealth_check_every_minutes");
+                    if(timer != null)
+                        CrownedBankConstants.setWealthyCheckMillis(timer.getAsLong() * 60 * 1000); // to seconds, to milliseconds
+                    if(limit != null)
+                        CrownedBankConstants.setWealthyCheckAccountLimit(limit.getAsInt());
                 }
 
             }
