@@ -29,69 +29,87 @@ public abstract class GlobalConfig
 
     @Override
     public void initialize() throws Exception {
-        if(!configFile.exists()) {
+        // create configuration file
+        // in filesystem, if it does not exist.
+        if (!configFile.exists()) {
             configFile.getParentFile().mkdirs();
             try {
                 configFile.createNewFile();
-                try(final var output = new FileWriter(configFile);
-                        final var input = new InputStreamReader(provide())) {
+
+                // write default configuration
+                try (final var output = new FileWriter(configFile);
+                     final var input = new InputStreamReader(provide())) {
                     int b;
                     do {
                         b = input.read();
-                        if(b != -1) {
+                        if (b != -1) {
                             output.write(b);
                         }
                     } while (b != -1);
                 }
+
             } catch (IOException e) {
                 throw new Exception("Couldn't create configuration file.", e);
             }
         }
 
+        // read configuration
         try (final var stream = new FileReader(configFile)) {
-            final var object = JsonParser.parseReader(stream).getAsJsonObject();
+            final var root = JsonParser.parseReader(stream).getAsJsonObject();
             {
                 // configure remotes
-                object.getAsJsonArray("remotes").forEach(inferior -> {
-                    final var remoteProfile = inferior.getAsJsonObject();
+                root.getAsJsonArray("remotes").forEach(profileJson -> {
+                    final var remoteProfile = profileJson.getAsJsonObject();
                     final var profile = new Remote.Profile(
-                            remoteProfile.getAsJsonPrimitive("id")
-                                    .getAsString(),
+                            remoteProfile.getAsJsonPrimitive("id").getAsString(),
                             remoteProfile.getAsJsonObject("parameters")
                     );
 
                     final var remote = api.getRemoteRepository()
                             .retrieve(profile.id());
-                    if(remote == null)
+                    if (remote == null)
                         throw new IllegalStateException("No such remote identified by " + profile.id());
                     remote.configure(profile);
                 });
 
                 final var componentDeserializer = GsonComponentSerializer.gson();
 
-                // configure remotes
-                object.getAsJsonArray("currencies").forEach(inferior -> {
-                    final var json = inferior.getAsJsonObject();
+                // configure currencies
+                root.getAsJsonArray("currencies").forEach(inferior -> {
+                    final var currencyJson = inferior.getAsJsonObject();
                     final var currency = Currency.builder()
-                            .identifier(json.getAsJsonPrimitive("id").getAsString())
-                            .namePlural(componentDeserializer.deserializeFromTree(json.get("namePlural")))
-                            .nameSingular(componentDeserializer.deserializeFromTree(json.get("nameSingular")))
-                            .format(json.getAsJsonPrimitive("format").getAsString())
+                            .identifier(currencyJson.getAsJsonPrimitive("id").getAsString())
+                            .namePlural(componentDeserializer.deserializeFromTree(currencyJson.get("namePlural")))
+                            .nameSingular(componentDeserializer.deserializeFromTree(currencyJson.get("nameSingular")))
+                            .format(currencyJson.getAsJsonPrimitive("format").getAsString())
                             .build();
-                    api.getCurrencyRepository().register(currency);
+
+                    api.getCurrencyRepository()
+                            .register(currency);
                 });
 
-                api.getCurrencyRepository().setMajorCurrency(
-                        api.getCurrencyRepository()
-                                .retrieve(object.getAsJsonPrimitive("major_currency")
-                                        .getAsString())
-                );
+                final var majorCurrency = api.getCurrencyRepository()
+                        .retrieve(root.getAsJsonPrimitive("major_currency")
+                                .getAsString());
+                final var minorCurrency = api.getCurrencyRepository()
+                        .retrieve(root.getAsJsonPrimitive("major_currency")
+                                .getAsString());
 
-                api.getCurrencyRepository().setMinorCurrency(
-                        api.getCurrencyRepository()
-                                .retrieve(object.getAsJsonPrimitive("major_currency")
-                                        .getAsString())
-                );
+
+                if (majorCurrency != null) {
+                    api.getCurrencyRepository().setMajorCurrency(
+                            majorCurrency
+                    );
+                } else
+                    throw new Exception("Unknown major currency");
+
+                if (minorCurrency != null) {
+                    api.getCurrencyRepository().setMinorCurrency(
+                            minorCurrency
+                    );
+                }
+
+
             }
         } catch (IOException e) {
             throw new Exception("Couldn't read configuration.", e);

@@ -6,6 +6,8 @@ import eu.battleland.crownedbank.remote.Remote;
 
 import lombok.NonNull;
 
+import java.util.logging.Logger;
+
 /**
  * Default account deposit and withdraw handlers.
  */
@@ -54,7 +56,11 @@ public  class Handler {
             var remote = currency.getRemote();
             if(remote == null)
                 remote = this.remote;
-            return remote.handleWithdraw(account, amount).get();
+            try {
+                return remote.handleWithdraw(account, currency, amount).get();
+            } catch (Exception x) {
+                throw new Exception("Couldn't withdraw from account " + account.getIdentity(), x);
+            }
         }
     }
 
@@ -74,7 +80,11 @@ public  class Handler {
             var remote = currency.getRemote();
             if(remote == null)
                 remote = this.remote;
-            return remote.handleDeposit(account, amount).get();
+            try {
+                return remote.handleDeposit(account, currency, amount).get();
+            } catch (Exception x) {
+                throw new Exception("Couldn't deposit to account " + account.getIdentity(), x);
+            }
         }
     }
 

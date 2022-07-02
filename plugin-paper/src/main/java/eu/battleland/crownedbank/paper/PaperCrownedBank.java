@@ -3,29 +3,13 @@ package eu.battleland.crownedbank.paper;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.CurrencyRepository;
 import eu.battleland.crownedbank.RemoteRepository;
-import eu.battleland.crownedbank.config.GlobalConfig;
-import eu.battleland.crownedbank.model.Account;
-import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.remote.ProxyRemote;
 import eu.battleland.crownedbank.remote.DatabaseRemote;
-import eu.battleland.crownedbank.remote.Remote;
-import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
-import lombok.Setter;
 import lombok.extern.log4j.Log4j2;
-import net.kyori.adventure.text.serializer.gson.GsonComponentSerializer;
-import org.apache.commons.lang3.Validate;
 import org.bukkit.event.Listener;
-import org.jetbrains.annotations.NotNull;
 import org.spigotmc.SpigotConfig;
-
-import java.awt.print.Paper;
-import java.io.File;
-import java.io.InputStream;
-import java.util.Map;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Paper implementation of the CrownedBankAPI.
@@ -36,7 +20,7 @@ public class PaperCrownedBank
         implements Listener {
 
     @Getter
-    private final Plugin plugin;
+    private final BankPlugin plugin;
 
     @Getter
     private final CurrencyRepository currencyRepository
@@ -50,12 +34,24 @@ public class PaperCrownedBank
      *
      * @param plugin Plugin instance.
      */
-    public PaperCrownedBank(@NonNull Plugin plugin) {
+    public PaperCrownedBank(@NonNull BankPlugin plugin) {
         this.plugin = plugin;
-        if (SpigotConfig.bungee) {
-            this.setRemote(new ProxyRemote(plugin));
-        } else {
 
+        final var proxyRemote = new ProxyRemote(plugin);
+        {
+            getRemoteRepository()
+                    .register(proxyRemote);
         }
+        final var databaseRemote = new DatabaseRemote();
+        {
+            getRemoteRepository()
+                    .register(databaseRemote);
+        }
+
+        // select default remote
+        if (SpigotConfig.bungee)
+            this.setRemote(proxyRemote);
+        else
+            this.setRemote(databaseRemote);
     }
 }

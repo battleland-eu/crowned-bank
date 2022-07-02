@@ -1,6 +1,6 @@
 package eu.battleland.crownedbank;
 
-import eu.battleland.crownedbank.config.GlobalConfig;
+import eu.battleland.crownedbank.helper.Handler;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.remote.Remote;
 import lombok.AccessLevel;
@@ -19,10 +19,18 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public interface CrownedBankAPI {
 
+
+    /**
+     * Creates account.
+     * @param identity Identity.
+     * @return Account.
+     */
+    Account createAccount(@NonNull Account.Identity identity);
+
     /**
      * Retrieves account for identity.
      * @param identity Identity.
-     * @return Future of Account.
+     * @return Future of Account. May be from cache, or remote.
      */
     CompletableFuture<Account> retrieveAccount(@NonNull Account.Identity identity);
 
@@ -44,6 +52,10 @@ public interface CrownedBankAPI {
     abstract class Base
         implements CrownedBankAPI {
 
+        {
+            CrownedBankConstants.setApi(this);
+        }
+
         @Getter
         @Setter(AccessLevel.PROTECTED)
         private Remote remote;
@@ -59,9 +71,24 @@ public interface CrownedBankAPI {
                 = new ConcurrentHashMap<>();
 
         @Override
+        public Account createAccount(@NonNull Account.Identity identity) {
+            return Account.builder()
+                    .identity(identity)
+                    .depositHandler(Handler.remoteDepositRelay(this.remote))
+                    .withdrawHandler(Handler.remoteWithdrawRelay(this.remote))
+                    .build();
+        }
+
+        @Override
         public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity) {
             Objects.requireNonNull(remote, "Remote not present");
 
+            // return cached account
+            if (this.cachedAccounts.containsKey(identity))
+                return CompletableFuture.completedFuture(this.cachedAccounts.get(identity));
+
+            // check if account is already being retrieved,
+            // if yes, return it's future
             synchronized (this) {
                 final var future
                         = this.futures.get(identity);
@@ -70,29 +97,35 @@ public interface CrownedBankAPI {
             }
 
             final var future = CompletableFuture.supplyAsync(() -> {
-                // get cached
-                if (this.cachedAccounts.containsKey(identity))
-                    return this.cachedAccounts.get(identity);
-
-                // get remote
+                // fetch account from remote
                 Account account = null;
                 try {
-                    account = this.remote.provideAccount(identity).get();
-                    this.cachedAccounts.put(identity, account);
+                    final var fetchFuture = this.remote.fetchAccount(identity);
+
+                    try {
+                        account = fetchFuture.get();
+                    } catch (Exception ignored) {}
+
+                    if((!fetchFuture.isCompletedExceptionally()) && account == null) {
+                        account = createAccount(identity);
+                        this.remote.storeAccount(account);
+                    } if(account != null) {
+                        this.cachedAccounts.put(identity, account);
+                    }
                     return account;
                 } catch (Exception e) {
                     e.printStackTrace();
+                    return null;
+                } finally {
+                    synchronized (this) {
+                        this.futures.remove(identity); // remove account future
+                    }
                 }
-
-                synchronized (this) {
-                    this.futures.remove(identity); // remove future
-                }
-                return null;
             });
 
             // store future
             synchronized (this) {
-                this.futures.put(identity, future); // register future
+                this.futures.put(identity, future); // register account future
             }
             return future;
         }

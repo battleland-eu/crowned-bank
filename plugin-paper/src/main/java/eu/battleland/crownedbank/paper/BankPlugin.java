@@ -22,47 +22,41 @@ import java.io.InputStream;
 
 
 @Log4j2
-public class Plugin
+public class BankPlugin
         extends JavaPlugin {
     /**
-     * Plugin Instance.
+     * Plugin instance.
      */
     @Getter
-    private static Plugin instance;
+    private static BankPlugin instance;
 
     {
         instance = this;
     }
 
     /**
-     * API Instance.
+     * API instance.
      */
     @Getter
     private final CrownedBankAPI api
             = new PaperCrownedBank(this);
 
     /**
-     * Config Instance.
+     * Config instance.
      */
     @Getter
     private final GlobalConfig configuration
             = new GlobalConfig(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
-            return Plugin.this.getResource("resources/config.json");
+            return BankPlugin.this.getResource("resources/config.json");
         }
     };
 
     @Override
     public void onEnable() {
 
-        // register default remotes
-        api.getRemoteRepository()
-                .register(new DatabaseRemote());
-        api.getRemoteRepository()
-                .register(new ProxyRemote(this));
-
-        // intialize configuration
+        // initialize configuration
         try {
             configuration.initialize();
         } catch (Exception e) {
@@ -88,6 +82,8 @@ public class Plugin
                 final var bank = Bukkit
                         .getServicesManager()
                         .load(CrownedBankAPI.class);
+                if(bank == null)
+                    return true;
 
                 // Retrieve account
                 bank.retrieveAccount(PlayerIdentity.of(player)).thenAccept((account) -> {
@@ -99,7 +95,7 @@ public class Plugin
                         );
                     });
                 });
-                return false;
+                return true;
             }
         });
     }

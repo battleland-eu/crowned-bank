@@ -26,6 +26,6 @@ shadowJar {
 }
 
 bukkit {
-    main = "eu.battleland.crownedbank.paper.Plugin"
+    main = "eu.battleland.crownedbank.paper.BankPlugin"
     apiVersion = "1.18"
 }

@@ -16,8 +16,12 @@ repositories {
 }
 
 dependencies {
+    // in-house
     implementation(project(":api"))
     implementation(project(":api-proxy"))
+
+    // external
+    implementation "net.kyori:adventure-text-serializer-gson:4.10.1"
     compileOnly "net.md-5:bungeecord-api:1.18-R0.1-SNAPSHOT"
 }
 

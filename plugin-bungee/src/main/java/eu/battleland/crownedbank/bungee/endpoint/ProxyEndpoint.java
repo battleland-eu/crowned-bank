@@ -1,26 +1,33 @@
 package eu.battleland.crownedbank.bungee.endpoint;
 
 import com.google.common.io.ByteStreams;
+import eu.battleland.crownedbank.CrownedBankAPI;
+import eu.battleland.crownedbank.CrownedBankConstants;
 import eu.battleland.crownedbank.abstracted.Controllable;
-import eu.battleland.crownedbank.bungee.Plugin;
+import eu.battleland.crownedbank.bungee.BankPlugin;
+import eu.battleland.crownedbank.model.Account;
+import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.proxy.ProxyConstants;
+import eu.battleland.crownedbank.proxy.ProxyOperation;
 import lombok.NonNull;
+import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
 
-import java.lang.reflect.Proxy;
+import java.util.concurrent.ExecutionException;
 
 public class ProxyEndpoint
-    implements Listener, Controllable {
+        implements Listener, Controllable {
 
-    private final Plugin plugin;
+    private final BankPlugin plugin;
 
     /**
      * Constructor.
+     *
      * @param plugin Plugin Instance.
      */
-    public ProxyEndpoint(@NonNull Plugin plugin) {
+    public ProxyEndpoint(@NonNull BankPlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -36,10 +43,132 @@ public class ProxyEndpoint
         this.plugin.getProxy().unregisterChannel(ProxyConstants.CHANNEL);
     }
 
+
     @EventHandler
     public void on(final PluginMessageEvent event) {
-        if(!event.getTag().equals(ProxyConstants.CHANNEL))
+        if (!(event.getSender() instanceof Server requestee))
             return;
-        final var stream = ByteStreams.newDataInput(event.getData());
+
+        // channel check
+        if (!event.getTag().equals(ProxyConstants.CHANNEL))
+            return;
+
+        final var request
+                = ByteStreams.newDataInput(event.getData());
+        final var response
+                = ByteStreams.newDataOutput();
+
+        // sub channel check
+        final var sub = request.readUTF();
+        if (!ProxyConstants.SUB_CHANNEL.equals(sub))
+            return;
+
+
+        try {
+            // read operation
+            final var op = ProxyOperation
+                    .values()[request.readByte()];
+
+            // read identity
+            final var identityRaw = request.readUTF();
+            final var identity = CrownedBankConstants.GSON.fromJson(
+                    identityRaw, Account.Identity.class
+            );
+
+            // write subchannel
+            response.writeUTF(ProxyConstants.SUB_CHANNEL);
+
+            switch (op) {
+                case FETCH_REQUEST -> {
+                    // write operation
+                    response.writeByte(ProxyOperation.FETCH_RESPONSE.ordinal());
+                    // write identity
+                    response.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+
+                    this.plugin.getLogger().info(String.format("Fetch request for '%s'.", identity));
+                    plugin.getApi().retrieveAccount(identity).thenAccept((account -> {
+                        if (account != null)
+                            response.writeUTF(CrownedBankConstants.GSON.toJson(account));
+                        else
+                            response.writeUTF("null");
+                        this.plugin.getLogger().info(String.format("Responded to fetch request for '%s'.", identity));
+                    }));
+                }
+                case WITHDRAW_REQUEST -> {
+                    // write operation
+                    response.writeByte(ProxyOperation.WITHDRAW_RESPONSE.ordinal());
+                    // write identity
+                    response.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+
+                    try {
+                        final Currency currency = plugin
+                                .getApi()
+                                .getCurrencyRepository()
+                                .retrieve(request.readUTF());
+                        if (currency == null)
+                            throw new Exception("Unknown currency");
+                        float amount = request.readFloat();
+
+                        plugin.getApi().retrieveAccount(identity).thenAccept((account -> {
+                            try {
+                                final var result = account.withdraw(currency, amount).get();
+                                response.writeBoolean(result);
+                                response.writeFloat(account.status(currency));
+                            } catch (Exception e) {
+                                plugin.getLogger().warning("Couldn't withdraw from account " + identity);
+                            }
+                        }));
+
+                        this.plugin.getLogger().info(String.format("Withdraw request for '%s'.", identity));
+                    } catch (Exception x) {
+                        plugin.getLogger().warning("Couldn't handle withdraw request for " + identity);
+
+                        response.writeBoolean(false);
+                        response.writeFloat(0);
+                    }
+                }
+                case DEPOSIT_REQUEST -> {
+                    // write operation
+                    response.writeByte(ProxyOperation.DEPOSIT_RESPONSE.ordinal());
+                    // write identity
+                    response.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+
+                    try {
+                        final Currency currency = plugin
+                                .getApi()
+                                .getCurrencyRepository()
+                                .retrieve(request.readUTF());
+                        if (currency == null)
+                            throw new Exception("Unknown currency");
+                        float amount = request.readFloat();
+
+                        plugin.getApi().retrieveAccount(identity).thenAccept((account -> {
+                            try {
+                                final var result = account.deposit(currency, amount).get();
+                                response.writeBoolean(result);
+                                response.writeFloat(account.status(currency));
+                            } catch (Exception e) {
+                                plugin.getLogger().warning("Couldn't deposit to account " + identity);
+                            }
+                        }));
+
+                        this.plugin.getLogger().info(String.format("Deposit request for '%s'.", identity));
+                    } catch (Exception x) {
+                        plugin.getLogger().warning("Couldn't handle deposit request for " + identity);
+
+                        response.writeBoolean(false);
+                        response.writeFloat(0);
+                    }
+                }
+            }
+
+            requestee.sendData(ProxyConstants.CHANNEL, response.toByteArray());
+
+        } catch (Exception x) {
+            this.plugin.getLogger().severe("Malformed proxy request");
+            x.printStackTrace();
+        } finally {
+            event.setCancelled(true);
+        }
     }
 }

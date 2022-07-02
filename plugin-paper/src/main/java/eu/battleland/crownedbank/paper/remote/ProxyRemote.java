@@ -1,8 +1,11 @@
 package eu.battleland.crownedbank.paper.remote;
 
 import com.google.common.io.ByteStreams;
+import eu.battleland.crownedbank.CrownedBankConstants;
 import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.model.Account;
+import eu.battleland.crownedbank.model.Currency;
+import eu.battleland.crownedbank.paper.BankPlugin;
 import eu.battleland.crownedbank.proxy.ProxyConstants;
 import eu.battleland.crownedbank.proxy.ProxyOperation;
 import eu.battleland.crownedbank.remote.Remote;
@@ -19,70 +22,113 @@ import java.net.UnknownHostException;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 @Log4j2
 public class ProxyRemote
         implements Remote, Listener {
 
 
-    private final JavaPlugin plugin;
+    private final BankPlugin plugin;
 
     private final Map<Account.Identity, CompletableFuture<Pair<Boolean, Float>>> withdrawFutures
             = new ConcurrentHashMap<>();
     private final Map<Account.Identity, CompletableFuture<Pair<Boolean, Float>>> depositFutures
             = new ConcurrentHashMap<>();
-    private final Map<Account.Identity, CompletableFuture<Account>> provideFutures
+
+    private final Map<Account.Identity, CompletableFuture<Account>> fetchFutures
             = new ConcurrentHashMap<>();
 
+    @Getter
+    private boolean acceptConfiguration = true;
     @Getter
     private InetAddress toleratedAddress
             = InetAddress.getLoopbackAddress();
 
-    public ProxyRemote(@NonNull JavaPlugin plugin) {
+    public ProxyRemote(@NonNull BankPlugin plugin) {
         this.plugin = plugin;
+
 
         // Register outgoing channel
         Bukkit.getServer().getMessenger()
                 .registerOutgoingPluginChannel(this.plugin, ProxyConstants.CHANNEL);
+
         // Register incoming channel listener
-        Bukkit.getServer().getMessenger()
-                .registerIncomingPluginChannel(this.plugin, ProxyConstants.CHANNEL,
-                        (channel, player, message) -> {
-                            if (channel.equals(ProxyConstants.CHANNEL))
-                                return;
-                            final var stream
-                                    = ByteStreams.newDataInput(message);
-                            try {
-                                // read operation
-                                final var op = ProxyOperation
-                                        .values()[stream.readByte()];
+        Bukkit.getServer().getMessenger().registerIncomingPluginChannel(this.plugin, ProxyConstants.CHANNEL, (channel, player, message) -> {
+            if (!channel.equals(ProxyConstants.CHANNEL))
+                return;
+            final var stream
+                    = ByteStreams.newDataInput(message);
+            try {
+                // read sub-channel
+                final var sub = stream.readUTF();
+                if(!ProxyConstants.SUB_CHANNEL.equals(sub))
+                    return;
 
-                                // read account identity
-                                final var identity = ProxyConstants.GSON
-                                        .fromJson(stream.readUTF(), Account.Identity.class);
+                // read operation
+                final var op = ProxyOperation
+                        .values()[stream.readByte()];
+                // read account identity
+                final var identity = CrownedBankConstants.GSON
+                        .fromJson(stream.readUTF(), Account.Identity.class);
 
+                switch (op) {
+                    case FETCH_RESPONSE -> {
+                        final var future
+                                = this.fetchFutures.get(identity);
+                        if(future == null) {
+                            log.warn("Fetch response for '{}' received but not expected.", identity);
+                            return;
+                        }
 
-                                switch (op) {
-                                    case PROVIDE_RESPONSE -> {
-                                        this.provideFutures.get(identity)
-                                                .complete(ProxyConstants.GSON.fromJson(stream.readUTF(), Account.class));
-                                        log.info("Provided new account for '{}'", identity);
-                                    }
-                                    case WITHDRAW_RESPONSE -> {
-                                        this.withdrawFutures.get(identity)
-                                                .complete(Pair.of(stream.readBoolean(), stream.readFloat()));
-                                        log.info("Withdraw from account '{}' completed.", identity);
-                                    }
-                                    case DEPOSIT_RESPONSE -> {
-                                        this.depositFutures.get(identity)
-                                                .complete(Pair.of(stream.readBoolean(), stream.readFloat()));
-                                        log.info("Deposit to account '{}' completed.", identity);
-                                    }
-                                }
-                            } catch (Exception ignored) {
+                        final var response = stream.readUTF();
 
-                            }
-                        });
+                        if (response.length() == 0 || response.equals("null")) {
+                            future.complete(null);
+                            log.error("Fetched null account '{}'", identity);
+                        } else {
+                            // create account, and feed it data from proxy.
+                            final var account = plugin.getApi().createAccount(identity)
+                                    .feed(CrownedBankConstants.GSON.fromJson(response, Account.class));
+                            future.complete(account);
+                            log.info("Fetched account for '{}'", identity);
+                        }
+                    }
+                    case WITHDRAW_RESPONSE -> {
+                        final var withdrawFuture = this.withdrawFutures.get(identity);
+                        final var data = Pair.of(
+                                stream.readBoolean(),
+                                stream.readFloat()
+                        );
+                        if(withdrawFuture == null) {
+                            log.warn("Withdraw response for '{}' received but not expected. ({};{})",
+                                    identity, data.getFirst(), data.getSecond()
+                            );
+                            return;
+                        }
+                        withdrawFuture.complete(data);
+                        log.info("Withdraw from account '{}' completed.", identity);
+                    }
+                    case DEPOSIT_RESPONSE -> {
+                        final var depositFuture = this.depositFutures.get(identity);
+                        final var data = Pair.of(
+                                stream.readBoolean(),
+                                stream.readFloat()
+                        );
+                        if(depositFuture == null) {
+                            log.warn("Deposit response for '{}' received but not expected. ({};{})",
+                                    identity, data.getFirst(), data.getSecond()
+                            );
+                            return;
+                        }
+                        depositFuture.complete(data);
+                        log.info("Deposit to account '{}' completed.", identity);
+                    }
+                }
+            } catch (Exception x) {
+                log.error("Malformed proxy response", x);
+            }
+        });
     }
 
     @Override
@@ -92,77 +138,97 @@ public class ProxyRemote
 
     @Override
     public void configure(@NonNull Profile profile) {
-        if(!profile.parameters().has("tolerated_address"))
-            return;
-
-        final var address = profile.parameters()
-                .getAsJsonPrimitive("tolerated_address")
-                .getAsString();
-
-        try {
+        if (profile.parameters()
+                .has("accept_configuration")) {
+            this.acceptConfiguration = profile.parameters()
+                    .getAsJsonPrimitive("accept_configuration")
+                    .getAsBoolean();
+        }
+        if (profile.parameters()
+                .has("tolerated_address")) {
+            final var address = profile.parameters()
+                    .getAsJsonPrimitive("tolerated_address")
+                    .getAsString();
             try {
                 this.toleratedAddress = InetAddress.getByName(address);
             } catch (UnknownHostException e) {
                 throw new IllegalStateException("Invalid address: " + address);
             }
-        } catch (IllegalStateException x) {
-            log.error("Couldn't read parameters", x);
         }
     }
 
     @Override
-    public CompletableFuture<@Nullable Account> provideAccount(@NonNull Account.Identity identity) {
-        final var future = new CompletableFuture<Account>();
-        this.provideFutures.put(identity, future);
+    public CompletableFuture<Boolean> storeAccount(@NonNull Account account) {
+        return CompletableFuture.completedFuture(true);
+    }
 
-        // request
+    @Override
+    public CompletableFuture<@Nullable Account> fetchAccount(@NonNull Account.Identity identity) {
+        final var future = new CompletableFuture<Account>();
+        this.fetchFutures.put(identity, future);
+
+        // request account from proxy
         {
             final var data = ByteStreams.newDataOutput();
-            data.writeByte(ProxyOperation.PROVIDE_REQUEST.ordinal());
-            data.writeUTF(ProxyConstants.GSON.toJson(identity));
-            Bukkit.getServer().sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            data.writeUTF(ProxyConstants.SUB_CHANNEL);
+            data.writeByte(ProxyOperation.FETCH_REQUEST.ordinal());
+            data.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+            Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
+                player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            }, () -> {
+                log.error("There's nobody online. I can't send message through to proxy.");
+            });
         }
 
-        return future;
+        return future.orTimeout(10, TimeUnit.SECONDS);
     }
 
     @Override
     public CompletableFuture<Pair<Boolean, Float>> handleWithdraw(@NonNull Account account,
+                                                                  Currency currency,
                                                                   float amount) {
         final var future = new CompletableFuture<Pair<Boolean, Float>>();
         this.withdrawFutures.put(account.getIdentity(), future);
 
-        // request
+        // request withdraw from account
         {
             final var data = ByteStreams.newDataOutput();
+            data.writeUTF(ProxyConstants.SUB_CHANNEL);
             data.writeByte(ProxyOperation.WITHDRAW_REQUEST.ordinal());
-            data.writeUTF(ProxyConstants.GSON.toJson(account.getIdentity()));
+            data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
+            data.writeUTF(currency.identifier());
             data.writeFloat(amount);
-
-            Bukkit.getServer()
-                    .sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
+                player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            }, () -> {
+                log.error("There's nobody online. I can't send message through to proxy.");
+            });
         }
 
-        return future;
+        return future.orTimeout(10, TimeUnit.SECONDS);
     }
 
     @Override
     public CompletableFuture<Pair<Boolean, Float>> handleDeposit(@NonNull Account account,
+                                                                 Currency currency,
                                                                  float amount) {
         final var future = new CompletableFuture<Pair<Boolean, Float>>();
         this.depositFutures.put(account.getIdentity(), future);
 
-        // request
+        // request deposit from account
         {
             final var data = ByteStreams.newDataOutput();
+            data.writeUTF(ProxyConstants.SUB_CHANNEL);
             data.writeByte(ProxyOperation.DEPOSIT_REQUEST.ordinal());
-            data.writeUTF(ProxyConstants.GSON.toJson(account.getIdentity()));
+            data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
+            data.writeUTF(currency.identifier());
             data.writeFloat(amount);
-
-            Bukkit.getServer()
-                    .sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
+                player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
+            }, () -> {
+                log.error("There's nobody online. I can't send message through to proxy.");
+            });
         }
-
-        return future;
+        return future.orTimeout(10, TimeUnit.SECONDS);
     }
 }

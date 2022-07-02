@@ -1,4 +1,5 @@
 {
+
   "remotes": [
     {
       "id": "database",
@@ -8,14 +9,9 @@
         "password": "",
         "poolSize": 10
       }
-    },
-    {
-      "id": "proxy",
-      "parameters": {
-        "accept_configuration": true
-      }
     }
   ],
+
   "currencies": [
     {
       "id": "coins",
@@ -38,6 +34,7 @@
       "format": "%.2f"
     }
   ],
+
   "major_currency": "coins",
   "minor_currency": "tokens"
 }

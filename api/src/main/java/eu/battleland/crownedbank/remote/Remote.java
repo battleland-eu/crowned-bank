@@ -4,6 +4,7 @@ import com.google.gson.JsonObject;
 import eu.battleland.crownedbank.abstracted.Identifiable;
 import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.model.Account;
+import eu.battleland.crownedbank.model.Currency;
 import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -20,11 +21,18 @@ public interface Remote
     void configure(@NonNull Profile profile);
 
     /**
-     * Provide account from remote.
+     * Store account in remote.
+     * @param account Account.
+     * @return Boolean true if successful.
+     */
+    CompletableFuture<Boolean> storeAccount(@NonNull Account account);
+
+    /**
+     * Fetch account from remote.
      * @param identity Identity of account.
      * @return Nullable account.
      */
-    CompletableFuture<@Nullable Account> provideAccount(@NonNull Account.Identity identity);
+    CompletableFuture<@Nullable Account> fetchAccount(@NonNull Account.Identity identity);
 
     /**
      * Handle account withdraw.
@@ -32,7 +40,7 @@ public interface Remote
      * @param amount  Amount to withdraw.
      * @return Boolean true if withdraw from account was successful & new account status.
      */
-    CompletableFuture<Pair<Boolean, Float>> handleWithdraw(final Account account, float amount);
+    CompletableFuture<Pair<Boolean, Float>> handleWithdraw(final Account account, final Currency currency, float amount);
 
     /**
      * Handle account deposit.
@@ -40,7 +48,7 @@ public interface Remote
      * @param amount  Amount to deposit.
      * @return Boolean true if deposit to account was successful & new account status.
      */
-    CompletableFuture<Pair<Boolean, Float>> handleDeposit(final Account account, float amount);
+    CompletableFuture<Pair<Boolean, Float>> handleDeposit(final Account account, final Currency currency, float amount);
 
     /**
      * Remote profile

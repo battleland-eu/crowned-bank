@@ -9,14 +9,14 @@ import lombok.Getter;
 import java.io.File;
 import java.io.InputStream;
 
-public class Plugin
+public class BankPlugin
         extends net.md_5.bungee.api.plugin.Plugin {
 
     /**
      * Plugin Instance.
      */
     @Getter
-    private static Plugin instance;
+    private static BankPlugin instance;
     {
         instance = this;
     }
@@ -39,7 +39,7 @@ public class Plugin
             = new GlobalConfig(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
-            return Plugin.this.getResourceAsStream("resources/config.json");
+            return BankPlugin.this.getResourceAsStream("resources/config.json");
         }
     };
 
@@ -51,16 +51,12 @@ public class Plugin
 
     @Override
     public void onEnable() {
-
-        // register default remotes
-        api.getRemoteRepository()
-                .register(new DatabaseRemote());
-
         // initialize configuration
         try {
             configuration.initialize();
+            getLogger().info("Initialized global configuration");
         } catch (Exception e) {
-            getLogger().warning("Couldn't initialize global configuration");
+            getLogger().severe("Couldn't initialize global configuration");
             e.printStackTrace();
         }
 

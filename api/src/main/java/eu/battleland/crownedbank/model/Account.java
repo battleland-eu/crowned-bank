@@ -17,9 +17,12 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiFunction;
 import java.util.function.Function;
+import java.util.logging.Logger;
 
 @Builder
 public class Account {
+
+    public static final Logger logger = Logger.getLogger("CrownedBank");
 
     @Getter
     private Account.Identity identity;
@@ -27,7 +30,9 @@ public class Account {
     /**
      * Cached currencies held by account.
      */
-    private Map<Currency, Float> currencies;
+    @Builder.Default
+    private Map<Currency, Float> currencies
+            = new HashMap<>();
 
     /**
      * param Currency - Currency to withdraw.<br>
@@ -66,8 +71,15 @@ public class Account {
             synchronized (this) {
                 try {
                     final var result = this.withdrawHandler.apply(currency, amount, this);
-                    if (!result.getFirst())
+                    if (!result.getFirst()) {
+                        logger.info(String.format(
+                                "Failed to withdraw '%.2f' %s from account '%s'", amount, currency.identifier(), identity
+                        ));
                         return false;
+                    }
+                    logger.info(String.format(
+                            "Successfully withdrawn '%.2f' %s from account '%s'", amount, currency.identifier(), identity
+                    ));
                     this.currencies.put(currency, result.getSecond());
                     return true;
                 } catch (Exception x) {
@@ -92,8 +104,15 @@ public class Account {
             synchronized (this) {
                 try {
                     final var result = this.depositHandler.apply(currency, amount, this);
-                    if (!result.getFirst())
+                    if (!result.getFirst()) {
+                        logger.info(String.format(
+                                "Failed to deposit '%.2f' %s to account '%s'", amount, currency.identifier(), identity
+                        ));
                         return false;
+                    }
+                    logger.info(String.format(
+                            "Successfully deposited '%.2f' %s to account '%s'", amount, currency.identifier(), identity
+                    ));
                     this.currencies.put(currency, result.getSecond());
                     return true;
                 } catch (Exception x) {
@@ -111,6 +130,17 @@ public class Account {
      */
     public float status(final Currency currency) {
         return this.currencies.getOrDefault(currency, 0f);
+    }
+
+    /**
+     * Feed from other account.
+     * @param other Other Account.
+     * @return This.
+     */
+    public Account feed(@Nullable Account other) {
+        if(other != null && other.currencies != null)
+            this.currencies.putAll(other.currencies);
+        return this;
     }
 
 
