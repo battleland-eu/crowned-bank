@@ -1,5 +1,6 @@
 
 ![crownedBank](https://user-images.githubusercontent.com/32541639/176990489-7ec08aab-1f3d-48ec-989e-d7d8122f50f9.png)
+[![Gradle Package](https://github.com/battleland-eu/crowned-bank/actions/workflows/gradle-publish.yml/badge.svg)](https://github.com/battleland-eu/crowned-bank/actions/workflows/gradle-publish.yml)
 
 A proper implementation of economy plugin both for networks and standalone servers. 
 
