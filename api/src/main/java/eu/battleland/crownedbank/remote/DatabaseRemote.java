@@ -12,6 +12,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Logger;
 
 public class DatabaseRemote
         implements Remote {
@@ -153,11 +154,16 @@ public class DatabaseRemote
     @Override
     public CompletableFuture<Pair<Boolean, Float>> handleWithdraw(Account account,
                                                                   Currency currency,
-                                                                  float amount) {
+                                                                  float amount,
+                                                                  CompletableFuture<Void> post) {
+        post.thenAccept((future) -> {
+            this.storeAccount(account);
+        });
+
         return CompletableFuture.supplyAsync(() -> {
             try {
-                float currentAmount = account.status(currency);
-                float newAmount = currentAmount - amount;
+                final float currentAmount = account.status(currency);
+                final float newAmount = currentAmount - amount;
                 if(newAmount < 0)
                     return Pair.of(false, currentAmount);
                 else {
@@ -165,8 +171,7 @@ public class DatabaseRemote
                     return Pair.of(true, newAmount);
                 }
             } catch (Exception x) {
-                x.printStackTrace();
-                throw new IllegalStateException("Communication failure.");
+                throw new IllegalStateException(x);
             }
         });
     }
@@ -174,10 +179,14 @@ public class DatabaseRemote
     @Override
     public CompletableFuture<Pair<Boolean, Float>> handleDeposit(Account account,
                                                                  Currency currency,
-                                                                 float amount) {
+                                                                 float amount,
+                                                                 CompletableFuture<Void> post) {
+        post.thenAccept((future) -> {
+            this.storeAccount(account);
+        });
+
         return CompletableFuture.supplyAsync(() -> {
             try {
-                storeAccount(account).get(); // store account in database
                 return Pair.of(true, account.status(currency) + amount);
             } catch (Exception x) {
                 x.printStackTrace();

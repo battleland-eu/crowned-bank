@@ -19,7 +19,7 @@ public class AccountTests {
         final var identity = new Account.Identity(UUID.randomUUID(), "name");
         final Account account = Account.builder()
                 .identity(identity)
-                .withdrawHandler((currency, amount, accountRef) -> {
+                .withdrawHandler((currency, amount, accountRef, post) -> {
                     final var status = accountRef.status(currency);
                     try {
                         Thread.sleep(new Random().nextInt(100));
@@ -30,7 +30,7 @@ public class AccountTests {
                         return Pair.of(false, status);
                     return Pair.of(true, status - amount);
                 })
-                .depositHandler((currency, amount, accountRef) -> Pair.of(true, accountRef.status(currency) + amount))
+                .depositHandler((currency, amount, accountRef, post) -> Pair.of(true, accountRef.status(currency) + amount))
                 .build();
         final var currency = Currency.builder()
                 .identifier("cookies")

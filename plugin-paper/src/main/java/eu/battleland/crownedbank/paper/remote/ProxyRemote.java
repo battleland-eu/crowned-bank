@@ -194,7 +194,10 @@ public class ProxyRemote
             final var data = ByteStreams.newDataOutput();
             data.writeUTF(ProxyConstants.SUB_CHANNEL);
             data.writeByte(ProxyOperation.FETCH_REQUEST.ordinal());
+
+            // identity
             data.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+
             Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
                 player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
             }, () -> {
@@ -216,6 +219,7 @@ public class ProxyRemote
             data.writeUTF(ProxyConstants.SUB_CHANNEL);
             data.writeByte(ProxyOperation.FETCH_WEALTHY_REQUEST.ordinal());
 
+            // currency identifier
             data.writeUTF(currency.identifier());
 
             Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
@@ -231,7 +235,8 @@ public class ProxyRemote
     @Override
     public CompletableFuture<Pair<Boolean, Float>> handleWithdraw(@NonNull Account account,
                                                                   Currency currency,
-                                                                  float amount) {
+                                                                  float amount,
+                                                                  CompletableFuture<Void> postHandler) {
         final var future = new CompletableFuture<Pair<Boolean, Float>>();
         this.withdrawFutures.put(account.getIdentity(), future);
 
@@ -240,9 +245,14 @@ public class ProxyRemote
             final var data = ByteStreams.newDataOutput();
             data.writeUTF(ProxyConstants.SUB_CHANNEL);
             data.writeByte(ProxyOperation.WITHDRAW_REQUEST.ordinal());
+
+            // identity
             data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
+            // currency identifier
             data.writeUTF(currency.identifier());
+            // amount
             data.writeFloat(amount);
+
             Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
                 player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
             }, () -> {
@@ -256,7 +266,8 @@ public class ProxyRemote
     @Override
     public CompletableFuture<Pair<Boolean, Float>> handleDeposit(@NonNull Account account,
                                                                  Currency currency,
-                                                                 float amount) {
+                                                                 float amount,
+                                                                 CompletableFuture<Void> postHandler) {
         final var future = new CompletableFuture<Pair<Boolean, Float>>();
         this.depositFutures.put(account.getIdentity(), future);
 
@@ -265,9 +276,14 @@ public class ProxyRemote
             final var data = ByteStreams.newDataOutput();
             data.writeUTF(ProxyConstants.SUB_CHANNEL);
             data.writeByte(ProxyOperation.DEPOSIT_REQUEST.ordinal());
+
+            // identity
             data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
+            // currency identifier
             data.writeUTF(currency.identifier());
+            // amount
             data.writeFloat(amount);
+
             Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
                 player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
             }, () -> {
