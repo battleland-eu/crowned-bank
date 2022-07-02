@@ -8,6 +8,7 @@ import eu.battleland.crownedbank.model.Currency;
 import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public interface Remote
@@ -33,6 +34,14 @@ public interface Remote
      */
     CompletableFuture<@Nullable Account> fetchAccount(@NonNull Account.Identity identity);
 
+
+    /**
+     * Query accounts by currency.
+     * @param currency Currency.
+     * @return List of Accounts.
+     */
+    CompletableFuture<List<Account>> fetchWealthyAccounts(@NonNull Currency currency);
+
     /**
      * Handle account withdraw.
      * @param account Account.
@@ -52,6 +61,6 @@ public interface Remote
     /**
      * Remote profile
      */
-    public static record Profile(String id,
-                                 JsonObject parameters) {}
+    public static record Profile(String id, JsonObject parameters) {}
+
 }

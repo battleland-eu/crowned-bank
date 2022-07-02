@@ -96,8 +96,6 @@ public abstract class GlobalConfig
                                 .getAsString());
 
 
-
-
                 if (majorCurrency != null) {
                     api.getCurrencyRepository().setMajorCurrency(
                             majorCurrency
@@ -110,7 +108,6 @@ public abstract class GlobalConfig
                             minorCurrency
                     );
                 }
-
 
             }
         } catch (IOException e) {

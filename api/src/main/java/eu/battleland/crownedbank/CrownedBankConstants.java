@@ -50,27 +50,7 @@ public class CrownedBankConstants {
 
     @Getter
     @Setter
-    private static String sqlTablePrefix = "crownedbank";
-
-    @Getter
-    @Setter
-    private static String sqlTableCommand = """
-            create table if not exists `%s_data`
-             ( `identity_name` TEXT NOT NULL , `identity_uuid` TEXT NOT NULL , `json_data` TEXT NOT NULL , UNIQUE (`identity_name`), UNIQUE (`identity_uuid`));
-            """;
-
-    @Getter
-    @Setter
-    private static String sqlStoreCommand = """
-                        insert into `%s_data` (`identity_name`,`identity_uuid`,`json_data`) values('%s','%s','%s')
-                        on duplicate key update json_data='%4$s'
-            """;
-    @Getter
-    @Setter
-    private static String sqlFetchCommand = """
-            select `json_data` from `%s_data`
-            where `identity_name`='%s' OR `identity_uuid`='%s'
-            """;
+    private static long wealthCheckMillis = 5 * 60 * 1000;
 
 
     // https://github.com/google/gson/issues/1794
