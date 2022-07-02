@@ -56,6 +56,7 @@ publishing {
 
     publications {
         gpr(MavenPublication) {
+            artifactId = 'crowned-bank-api'
             from components.java
         }
     }
