@@ -6,17 +6,31 @@ A proper implementation of economy plugin both for networks and standalone serve
 **Proxy**-**Server** communication is done with plugin messaging,to maintain it's reliability and compatibility with most proxies,
 without having to open any new insecure network ports. 
 
-## Supported Platforms
+## Capabilities
+### Supported Plug-Ins 
+- PlaceholderAPI (spigot)
+- Vault (spigot)
+### Supported Platforms
 - PaperMC 
 - BungeeCord
 - Velocity
+### Supported 
 
 ## Developers
-### Implementation
+### How does it work?
 Can communicate via multiple remotes at the same time.
 It means you can have *unique currency for one server*, while having *shared currency for whole network*.
 ### API
-### Packages
+Read more on wiki.
+#### Maven
+```xml
+```
+#### Gradle (Groovy DSL)
+```xml
+```
+#### Gradle (Kotlin DSL)
+```xml
+```
 
 ## Licensing
 Project is distrubuted under [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/#).
