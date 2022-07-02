@@ -9,6 +9,7 @@ import eu.battleland.crownedbank.model.Currency;
 import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
 
+import java.sql.SQLException;
 import java.util.concurrent.CompletableFuture;
 
 public class DatabaseRemote
@@ -44,6 +45,14 @@ public class DatabaseRemote
                     .getAsInt());
         }
         this.dataSource = new HikariDataSource(this.config);
+
+        // create database
+        try(final var connection = this.dataSource.getConnection();
+            final var statement = connection.createStatement()) {
+            statement.execute(String.format(CrownedBankConstants.getSqlTableCommand(), CrownedBankConstants.getSqlTablePrefix()));
+        } catch (Exception e) {
+            throw new IllegalStateException(e);
+        }
     }
 
     @Override

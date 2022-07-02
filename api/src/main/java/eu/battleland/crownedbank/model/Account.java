@@ -36,8 +36,7 @@ public class Account {
      * ret   Boolean, Float  - Whether the operation was successful & new currency amount<br><br>
      * <p>
      * Withdraw handler.
-     * Returns true if withdrawal from account was successful,
-     * otherwise returns false.
+     * Returns true if withdrawal from account was successful, otherwise returns false.
      */
     private transient final TriFunction<Currency, Float, Account, Pair<Boolean, Float>> withdrawHandler;
 
@@ -65,15 +64,16 @@ public class Account {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (this) {
                 try {
+                    // ask withdraw handler if we can withdraw from this account.
                     final var result = this.withdrawHandler.apply(currency, amount, this);
                     if (!result.getFirst()) {
                         logger.info(String.format(
-                                "Failed to withdraw '%.2f' %s from account '%s'", amount, currency.identifier(), identity
+                                "Failed to withdraw '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
                         ));
                         return false;
                     }
                     logger.info(String.format(
-                            "Successfully withdrawn '%.2f' %s from account '%s'", amount, currency.identifier(), identity
+                            "Successfully withdrawn '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
                     ));
                     this.currencies.put(currency, result.getSecond());
                     return true;
@@ -98,15 +98,16 @@ public class Account {
         return CompletableFuture.supplyAsync(() -> {
             synchronized (this) {
                 try {
+                    // ask deposit handler if we can deposit to this account.
                     final var result = this.depositHandler.apply(currency, amount, this);
                     if (!result.getFirst()) {
                         logger.info(String.format(
-                                "Failed to deposit '%.2f' %s to account '%s'", amount, currency.identifier(), identity
+                                "Failed to deposit '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
                         ));
                         return false;
                     }
                     logger.info(String.format(
-                            "Successfully deposited '%.2f' %s to account '%s'", amount, currency.identifier(), identity
+                            "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
                     ));
                     this.currencies.put(currency, result.getSecond());
                     return true;

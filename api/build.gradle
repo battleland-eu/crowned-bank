@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id "io.freefair.lombok" version "6.3.0"
+    id "maven-publish"
 }
 
 java {
@@ -35,6 +36,28 @@ dependencies {
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.2'
 
     testImplementation('mysql:mysql-connector-java:8.0.28')
+}
+
+subprojects {
+    apply plugin: "maven-publish"
+    publishing {
+        repositories {
+            maven {
+                name = "GitHubPackages"
+                url = uri("https://github.com/battleland-eu/crowned-bank")
+                credentials {
+                    username = project.findProperty("gpr.user") ?: System.getenv("USERNAME")
+                    password = project.findProperty("gpr.key") ?: System.getenv("TOKEN")
+                }
+            }
+        }
+
+        publications {
+            gpr(MavenPublication) {
+                from components.java
+            }
+        }
+    }
 }
 
 test {

@@ -87,12 +87,15 @@ public abstract class GlobalConfig
                             .register(currency);
                 });
 
+                // configure defaults
                 final var majorCurrency = api.getCurrencyRepository()
                         .retrieve(root.getAsJsonPrimitive("major_currency")
                                 .getAsString());
                 final var minorCurrency = api.getCurrencyRepository()
                         .retrieve(root.getAsJsonPrimitive("major_currency")
                                 .getAsString());
+
+
 
 
                 if (majorCurrency != null) {

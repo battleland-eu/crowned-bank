@@ -10,5 +10,4 @@ include 'api'
 include 'plugin-paper'
 include 'plugin-bungee'
 include 'plugin-velocity'
-include 'api-proxy'
 

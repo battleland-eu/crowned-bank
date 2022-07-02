@@ -87,7 +87,7 @@ public class ProxyRemote
                             log.error("Fetched null account '{}'", identity);
                         } else {
                             // create account, and feed it data from proxy.
-                            final var account = plugin.getApi().createAccount(identity)
+                            final var account = plugin.getApi().dummyAccount(identity)
                                     .feed(CrownedBankConstants.GSON.fromJson(response, Account.class));
                             future.complete(account);
                             log.info("Fetched account for '{}'", identity);

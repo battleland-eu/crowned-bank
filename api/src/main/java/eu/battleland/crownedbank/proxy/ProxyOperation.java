@@ -12,5 +12,4 @@ public enum ProxyOperation {
 
     DEPOSIT_REQUEST,
     DEPOSIT_RESPONSE;
-
 }

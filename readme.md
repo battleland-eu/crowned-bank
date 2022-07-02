@@ -3,10 +3,6 @@
 
 A proper implementation of economy plugin both for networks and standalone servers. 
 
-## Implementation
-Can communicate via multiple remotes at the same time. 
-It means you can have *unique currency for one server*, while having *shared currency for whole network*. 
-
 **Proxy**-**Server** communication is done with plugin messaging,to maintain it's reliability and compatibility with most proxies,
 without having to open any new insecure network ports. 
 
@@ -14,3 +10,13 @@ without having to open any new insecure network ports.
 - PaperMC 
 - BungeeCord
 - Velocity
+
+## Developers
+### Implementation
+Can communicate via multiple remotes at the same time.
+It means you can have *unique currency for one server*, while having *shared currency for whole network*.
+### API
+### Packages
+
+## Licensing
+Project is distrubuted under [Apache License 2.0](https://choosealicense.com/licenses/apache-2.0/#).

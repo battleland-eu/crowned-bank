@@ -21,11 +21,11 @@ public interface CrownedBankAPI {
 
 
     /**
-     * Creates account.
+     * Creates dummy account.
      * @param identity Identity.
      * @return Account.
      */
-    Account createAccount(@NonNull Account.Identity identity);
+    Account dummyAccount(@NonNull Account.Identity identity);
 
     /**
      * Retrieves account for identity.
@@ -71,13 +71,14 @@ public interface CrownedBankAPI {
                 = new ConcurrentHashMap<>();
 
         @Override
-        public Account createAccount(@NonNull Account.Identity identity) {
+        public Account dummyAccount(@NonNull Account.Identity identity) {
             return Account.builder()
                     .identity(identity)
                     .depositHandler(Handler.remoteDepositRelay(this.remote))
                     .withdrawHandler(Handler.remoteWithdrawRelay(this.remote))
                     .build();
         }
+
 
         @Override
         public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity) {
@@ -96,8 +97,8 @@ public interface CrownedBankAPI {
                     return future; // return existing future
             }
 
+            // fetch account from remote
             final var future = CompletableFuture.supplyAsync(() -> {
-                // fetch account from remote
                 Account account = null;
                 try {
                     final var fetchFuture = this.remote.fetchAccount(identity);
@@ -107,11 +108,18 @@ public interface CrownedBankAPI {
                     } catch (Exception ignored) {}
 
                     if((!fetchFuture.isCompletedExceptionally()) && account == null) {
-                        account = createAccount(identity);
+                        // create new account
+                        // future has returned null, and it has not thrown exception
+                        account = dummyAccount(identity);
                         this.remote.storeAccount(account);
-                    } if(account != null) {
+                    }
+
+                    if(account != null) {
+                        // cache account
                         this.cachedAccounts.put(identity, account);
                     }
+
+                    // supply account
                     return account;
                 } catch (Exception e) {
                     e.printStackTrace();

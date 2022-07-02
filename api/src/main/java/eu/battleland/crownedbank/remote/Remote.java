@@ -13,7 +13,6 @@ import java.util.concurrent.CompletableFuture;
 public interface Remote
         extends Identifiable {
 
-
     /**
      * Configure remote.
      * @param profile Profile.
