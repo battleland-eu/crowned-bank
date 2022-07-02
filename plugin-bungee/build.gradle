@@ -18,7 +18,6 @@ repositories {
 dependencies {
     // in-house
     implementation(project(":api"))
-    implementation(project(":api-proxy"))
 
     // external
     implementation "net.kyori:adventure-text-serializer-gson:4.10.1"
@@ -30,6 +29,11 @@ assemble {
 }
 
 shadowJar {
-
+    archiveFileName = "crownedbank-bungee.jar"
 }
 
+bungee {
+    name = "CrownedBank Bungee"
+    description = 'CrownedBank Bungee implementation'
+    author = 'rgnt.xyz'
+}

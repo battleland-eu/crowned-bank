@@ -14,7 +14,6 @@ import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
-import org.bukkit.plugin.java.JavaPlugin;
 import org.jetbrains.annotations.Nullable;
 
 import java.net.InetAddress;

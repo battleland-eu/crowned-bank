@@ -3,7 +3,6 @@ package eu.battleland.crownedbank.bungee;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.bungee.endpoint.ProxyEndpoint;
 import eu.battleland.crownedbank.config.GlobalConfig;
-import eu.battleland.crownedbank.remote.DatabaseRemote;
 import lombok.Getter;
 
 import java.io.File;

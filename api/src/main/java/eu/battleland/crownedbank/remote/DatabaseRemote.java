@@ -10,7 +10,6 @@ import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
 
 public class DatabaseRemote
         implements Remote {
@@ -100,7 +99,7 @@ public class DatabaseRemote
                 if(newAmount < 0)
                     return Pair.of(false, currentAmount);
                 else {
-                    storeAccount(account);
+                    storeAccount(account).get(); // store account in database
                     return Pair.of(true, newAmount);
                 }
             } catch (Exception x) {
@@ -116,7 +115,7 @@ public class DatabaseRemote
                                                                  float amount) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                storeAccount(account);
+                storeAccount(account).get(); // store account in database
                 return Pair.of(true, account.status(currency) + amount);
             } catch (Exception x) {
                 x.printStackTrace();

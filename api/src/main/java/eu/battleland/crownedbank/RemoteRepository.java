@@ -2,13 +2,9 @@ package eu.battleland.crownedbank;
 
 import com.google.common.collect.ImmutableSet;
 import eu.battleland.crownedbank.abstracted.Repository;
-import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
 import lombok.Getter;
 import lombok.Setter;
-
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Remote repository.

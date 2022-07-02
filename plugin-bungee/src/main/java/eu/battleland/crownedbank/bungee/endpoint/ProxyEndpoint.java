@@ -1,7 +1,6 @@
 package eu.battleland.crownedbank.bungee.endpoint;
 
 import com.google.common.io.ByteStreams;
-import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.CrownedBankConstants;
 import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.bungee.BankPlugin;
@@ -14,8 +13,6 @@ import net.md_5.bungee.api.connection.Server;
 import net.md_5.bungee.api.event.PluginMessageEvent;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.event.EventHandler;
-
-import java.util.concurrent.ExecutionException;
 
 public class ProxyEndpoint
         implements Listener, Controllable {
@@ -58,25 +55,27 @@ public class ProxyEndpoint
         final var response
                 = ByteStreams.newDataOutput();
 
-        // sub channel check
-        final var sub = request.readUTF();
-        if (!ProxyConstants.SUB_CHANNEL.equals(sub))
-            return;
-
-
         try {
+
+            // read sub-channel
+            final var sub = request.readUTF();
+            if (!ProxyConstants.SUB_CHANNEL.equals(sub))
+                return;
+
             // read operation
             final var op = ProxyOperation
                     .values()[request.readByte()];
 
             // read identity
-            final var identityRaw = request.readUTF();
             final var identity = CrownedBankConstants.GSON.fromJson(
-                    identityRaw, Account.Identity.class
+                    request.readUTF(), Account.Identity.class
             );
 
-            // write subchannel
-            response.writeUTF(ProxyConstants.SUB_CHANNEL);
+            // start building response
+            {
+                // write subchannel
+                response.writeUTF(ProxyConstants.SUB_CHANNEL);
+            }
 
             switch (op) {
                 case FETCH_REQUEST -> {
@@ -86,6 +85,8 @@ public class ProxyEndpoint
                     response.writeUTF(CrownedBankConstants.GSON.toJson(identity));
 
                     this.plugin.getLogger().info(String.format("Fetch request for '%s'.", identity));
+
+                    // retrieve account, and continue building response.
                     plugin.getApi().retrieveAccount(identity).thenAccept((account -> {
                         if (account != null)
                             response.writeUTF(CrownedBankConstants.GSON.toJson(account));
@@ -123,6 +124,7 @@ public class ProxyEndpoint
                     } catch (Exception x) {
                         plugin.getLogger().warning("Couldn't handle withdraw request for " + identity);
 
+                        // decline withdraw
                         response.writeBoolean(false);
                         response.writeFloat(0);
                     }
@@ -156,12 +158,14 @@ public class ProxyEndpoint
                     } catch (Exception x) {
                         plugin.getLogger().warning("Couldn't handle deposit request for " + identity);
 
+                        // decline deposit
                         response.writeBoolean(false);
                         response.writeFloat(0);
                     }
                 }
             }
 
+            // send response
             requestee.sendData(ProxyConstants.CHANNEL, response.toByteArray());
 
         } catch (Exception x) {

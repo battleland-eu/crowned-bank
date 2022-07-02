@@ -3,10 +3,7 @@ package eu.battleland.crownedbank.helper;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
-
 import lombok.NonNull;
-
-import java.util.logging.Logger;
 
 /**
  * Default account deposit and withdraw handlers.

@@ -1,13 +1,10 @@
 package eu.battleland.crownedbank.model;
 
-import com.google.gson.JsonObject;
 import eu.battleland.crownedbank.CrownedBankConstants;
 import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.helper.TriFunction;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.extern.log4j.Log4j2;
-import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
@@ -15,8 +12,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.BiFunction;
-import java.util.function.Function;
 import java.util.logging.Logger;
 
 @Builder

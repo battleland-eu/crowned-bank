@@ -1,7 +1,6 @@
 package eu.battleland.crownedbank.tests;
 
 import eu.battleland.crownedbank.CrownedBankConstants;
-import eu.battleland.crownedbank.CurrencyRepository;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import org.junit.jupiter.api.Assertions;

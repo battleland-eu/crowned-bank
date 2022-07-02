@@ -1,6 +1,5 @@
 package eu.battleland.crownedbank.config;
 
-import com.google.gson.Gson;
 import com.google.gson.JsonParser;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.abstracted.Controllable;

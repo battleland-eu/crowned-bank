@@ -1,14 +1,5 @@
 package eu.battleland.crownedbank.sync;
 
-import com.google.gson.JsonObject;
-import eu.battleland.crownedbank.CurrencyRepository;
-import eu.battleland.crownedbank.model.Account;
-import eu.battleland.crownedbank.model.Currency;
-import org.jetbrains.annotations.NotNull;
-
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Codec operations.
  */

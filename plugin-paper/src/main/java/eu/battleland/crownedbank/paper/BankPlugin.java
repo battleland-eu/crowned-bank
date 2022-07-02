@@ -4,8 +4,6 @@ import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.config.GlobalConfig;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
-import eu.battleland.crownedbank.paper.remote.ProxyRemote;
-import eu.battleland.crownedbank.remote.DatabaseRemote;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import net.kyori.adventure.text.Component;

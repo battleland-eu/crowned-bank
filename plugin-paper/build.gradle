@@ -15,17 +15,20 @@ repositories {
 }
 
 dependencies {
+    // in-house
     implementation(project(":api"))
-    implementation(project(":api-proxy"))
 
+    // paperweight
     paperweightDevelopmentBundle("io.papermc.paper:dev-bundle:1.18.1-R0.1-SNAPSHOT")
 }
 
-shadowJar {
 
+shadowJar {
+    archiveFileName = "crownedbank-paper.jar"
 }
 
 bukkit {
     main = "eu.battleland.crownedbank.paper.BankPlugin"
+    name = "CrownedBank Paper"
     apiVersion = "1.18"
 }
