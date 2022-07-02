@@ -7,7 +7,8 @@
         "jdbcUrl": "jdbc:mysql://localhost:3306/test",
         "username": "root",
         "password": "",
-        "poolSize": 10
+        "poolSize": 10,
+        "tablePrefix": "crownedbank"
       }
     }
   ],
@@ -36,5 +37,8 @@
   ],
 
   "major_currency": "coins",
-  "minor_currency": "tokens"
+  "minor_currency": "tokens",
+
+  "wealth_check_every_minutes": 10,
+  "wealth_check_account_limit": 25
 }
