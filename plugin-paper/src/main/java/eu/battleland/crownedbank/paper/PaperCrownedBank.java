@@ -1,8 +1,8 @@
 package eu.battleland.crownedbank.paper;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.CurrencyRepository;
-import eu.battleland.crownedbank.RemoteRepository;
+import eu.battleland.crownedbank.repo.CurrencyRepository;
+import eu.battleland.crownedbank.repo.RemoteRepository;
 import eu.battleland.crownedbank.paper.remote.ProxyRemote;
 import eu.battleland.crownedbank.remote.SqlRemote;
 import lombok.Getter;
@@ -20,14 +20,7 @@ public class PaperCrownedBank
         implements Listener {
 
     @Getter
-    private final BankPlugin plugin;
-
-    @Getter
-    private final CurrencyRepository currencyRepository
-            = new CurrencyRepository();
-    @Getter
-    private final RemoteRepository remoteRepository
-            = new RemoteRepository();
+    private static BankPlugin pluginInstance;
 
     /**
      * Default constructor.
@@ -35,23 +28,24 @@ public class PaperCrownedBank
      * @param plugin Plugin instance.
      */
     public PaperCrownedBank(@NonNull BankPlugin plugin) {
-        this.plugin = plugin;
+        pluginInstance = plugin;
 
-        final var proxyRemote = new ProxyRemote(plugin);
+        // register remote factories
         {
-            getRemoteRepository()
-                    .register(proxyRemote);
-        }
-        final var databaseRemote = new SqlRemote();
-        {
-            getRemoteRepository()
-                    .register(databaseRemote);
+            getRemoteFactoryRepository()
+                    .register(ProxyRemote.factory());
+            getRemoteFactoryRepository()
+                    .register(SqlRemote.factory());
         }
 
-        // select default remote
-        if (SpigotConfig.bungee)
-            this.setRemote(proxyRemote);
-        else
-            this.setRemote(databaseRemote);
+    }
+
+    @Override
+    public void initialize() {
+    }
+
+    @Override
+    public void terminate() {
+
     }
 }

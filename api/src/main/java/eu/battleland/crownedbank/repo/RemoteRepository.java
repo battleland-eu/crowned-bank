@@ -1,4 +1,4 @@
-package eu.battleland.crownedbank;
+package eu.battleland.crownedbank.repo;
 
 import com.google.common.collect.ImmutableSet;
 import eu.battleland.crownedbank.abstracted.Repository;
@@ -10,7 +10,7 @@ import lombok.Setter;
  * Remote repository.
  */
 public class RemoteRepository
-    extends Repository<Remote.Identity, Remote> {
+    extends Repository<String, Remote> {
 
     @Getter @Setter
     private static Remote defaultRemote;
@@ -30,7 +30,7 @@ public class RemoteRepository
      * @return Remote instance.
      */
     @Override
-    public Remote retrieve(Remote.Identity id) {
+    public Remote retrieve(String id) {
         return super.retrieve(id);
     }
 

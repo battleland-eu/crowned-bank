@@ -1,7 +1,7 @@
 package eu.battleland.crownedbank.bungee.endpoint;
 
 import com.google.common.io.ByteStreams;
-import eu.battleland.crownedbank.CrownedBankConstants;
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.bungee.BankPlugin;
 import eu.battleland.crownedbank.model.Account;
@@ -91,7 +91,7 @@ public class ProxyEndpoint
 
                         response.writeInt(accounts.size());
                         accounts.forEach(account -> {
-                            response.writeUTF(CrownedBankConstants.GSON.toJson(account));
+                            response.writeUTF(CrownedBank.GSON.toJson(account));
                         });
                     } catch (Exception x) {
                         response.writeInt(0);
@@ -100,7 +100,7 @@ public class ProxyEndpoint
                     this.plugin.getLogger().info("Responded to fetch wealthy accounts request.");
                 } else {
                     // read identity
-                    final var identity = CrownedBankConstants.GSON.fromJson(
+                    final var identity = CrownedBank.GSON.fromJson(
                             request.readUTF(), Account.Identity.class
                     );
 
@@ -111,7 +111,7 @@ public class ProxyEndpoint
                             // write operation
                             response.writeByte(ProxyOperation.FETCH_RESPONSE.ordinal());
                             // write identity
-                            response.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+                            response.writeUTF(CrownedBank.GSON.toJson(identity));
 
                             Account account;
                             try {
@@ -138,7 +138,7 @@ public class ProxyEndpoint
                             // write operation
                             response.writeByte(ProxyOperation.WITHDRAW_RESPONSE.ordinal());
                             // write identity
-                            response.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+                            response.writeUTF(CrownedBank.GSON.toJson(identity));
 
                             try {
                                 final Currency currency = plugin
@@ -166,7 +166,7 @@ public class ProxyEndpoint
                             // write operation
                             response.writeByte(ProxyOperation.DEPOSIT_RESPONSE.ordinal());
                             // write identity
-                            response.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+                            response.writeUTF(CrownedBank.GSON.toJson(identity));
 
                             try {
                                 final Currency currency = plugin

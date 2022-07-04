@@ -2,11 +2,12 @@ package eu.battleland.crownedbank.paper.remote;
 
 import com.google.common.io.ByteStreams;
 import com.google.gson.JsonParser;
-import eu.battleland.crownedbank.CrownedBankConstants;
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.BankPlugin;
+import eu.battleland.crownedbank.paper.PaperCrownedBank;
 import eu.battleland.crownedbank.proxy.ProxyConstants;
 import eu.battleland.crownedbank.proxy.ProxyOperation;
 import eu.battleland.crownedbank.remote.Remote;
@@ -31,8 +32,7 @@ import java.util.function.Predicate;
 public class ProxyRemote
         implements Remote, Listener {
 
-    private Remote.Identity identifier
-            = new Identity("proxy", null);
+    private final String identifier;
 
     private final BankPlugin plugin;
 
@@ -51,8 +51,11 @@ public class ProxyRemote
     private InetAddress toleratedAddress
             = InetAddress.getLoopbackAddress();
 
-    public ProxyRemote(@NonNull BankPlugin plugin) {
+
+    public ProxyRemote(@NonNull BankPlugin plugin,
+                       @NonNull String identifier) {
         this.plugin = plugin;
+        this.identifier = identifier;
 
 
         // Register outgoing channel
@@ -85,7 +88,7 @@ public class ProxyRemote
                     final List<Account> accounts = new ArrayList<>(count);
 
                     for (int i = 0; i < count; i++) {
-                        accounts.add(CrownedBankConstants.GSON.fromJson(stream.readUTF(), Account.class));
+                        accounts.add(CrownedBank.GSON.fromJson(stream.readUTF(), Account.class));
                     }
                     fetchWealthyFuture.complete(accounts);
                     fetchWealthyFuture = null;
@@ -94,7 +97,7 @@ public class ProxyRemote
                 } else {
 
                     // read account identity
-                    final var identity = CrownedBankConstants.GSON
+                    final var identity = CrownedBank.GSON
                             .fromJson(stream.readUTF(), Account.Identity.class);
 
                     switch (op) {
@@ -159,13 +162,22 @@ public class ProxyRemote
         });
     }
 
-    @Override
-    public @NonNull Remote.Identity identifier() {
-        return identifier;
+    public static Factory factory() {
+        return new Factory() {
+            @Override
+            public Remote build(Profile profile) {
+                return new ProxyRemote(PaperCrownedBank.getPluginInstance(), profile.id()).configure(profile);
+            }
+
+            @Override
+            public @NonNull String identifier() {
+                return "proxy";
+            }
+        };
     }
 
     @Override
-    public void configure(@NonNull Profile profile) {
+    public Remote configure(@NonNull Profile profile) {
         if (profile.parameters()
                 .has("accept_configuration")) {
             this.acceptConfiguration = profile.parameters()
@@ -184,8 +196,14 @@ public class ProxyRemote
             }
         }
 
-        this.identifier.id(profile.id());
+       return this;
     }
+
+    @Override
+    public @NonNull String identifier() {
+        return identifier;
+    }
+
 
     @Override
     public CompletableFuture<Boolean> storeAccount(@NonNull Account account) {
@@ -204,7 +222,7 @@ public class ProxyRemote
             data.writeByte(ProxyOperation.FETCH_REQUEST.ordinal());
 
             // identity
-            data.writeUTF(CrownedBankConstants.GSON.toJson(identity));
+            data.writeUTF(CrownedBank.GSON.toJson(identity));
 
             Bukkit.getServer().getOnlinePlayers().stream().findFirst().ifPresentOrElse((player) -> {
                 player.sendPluginMessage(this.plugin, ProxyConstants.CHANNEL, data.toByteArray());
@@ -253,7 +271,7 @@ public class ProxyRemote
             data.writeByte(ProxyOperation.WITHDRAW_REQUEST.ordinal());
 
             // identity
-            data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
+            data.writeUTF(CrownedBank.GSON.toJson(account.getIdentity()));
             // currency identifier
             data.writeUTF(currencyStorage.getCurrency().identifier());
             // amount
@@ -292,7 +310,7 @@ public class ProxyRemote
             data.writeByte(ProxyOperation.DEPOSIT_REQUEST.ordinal());
 
             // identity
-            data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
+            data.writeUTF(CrownedBank.GSON.toJson(account.getIdentity()));
             // currency identifier
             data.writeUTF(currencyStorage.getCurrency().identifier());
             // amount

@@ -2,7 +2,7 @@ package eu.battleland.crownedbank.config;
 
 import com.google.gson.JsonParser;
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.CrownedBankConstants;
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
@@ -64,21 +64,25 @@ public abstract class GlobalConfig
             {
                 // configure remotes
                 root.getAsJsonArray("remotes").forEach(profileJson -> {
-                    final var remoteProfile = profileJson.getAsJsonObject();
-                    final var remoteIdentity = new Remote.Identity(remoteProfile.getAsJsonPrimitive("type").getAsString(),
-                            remoteProfile.getAsJsonPrimitive("id").getAsString());
+                    final var json = profileJson.getAsJsonObject();
 
-                    final var profile = new Remote.Profile(
-                            remoteIdentity.id(),
-                            remoteProfile.getAsJsonObject("parameters")
+                    final var remoteIdentifier = json.getAsJsonPrimitive("id")
+                            .getAsString();
+                    final var remoteType = json.getAsJsonPrimitive("type")
+                            .getAsString();
+                    final var remoteParameters = json.getAsJsonObject("parameters");
+
+                    final var remoteProfile = new Remote.Profile(
+                            remoteIdentifier, remoteParameters
                     );
 
-                    final var remote = api.getRemoteRepository()
-                            .retrieve(remoteIdentity);
+                    final var remoteFactory = api.getRemoteFactoryRepository()
+                            .retrieve(remoteType);
+                    if (remoteFactory == null)
+                        throw new IllegalStateException("No such remote factory " + remoteType);
 
-                    if (remote == null)
-                        throw new IllegalStateException("No such remote type " + remoteIdentity);
-                    remote.configure(profile);
+                   final var remote = remoteFactory.build(remoteProfile);
+                   api.getRemoteRepository().register(remote);
                 });
 
                 final var componentDeserializer = GsonComponentSerializer.gson();
@@ -86,10 +90,12 @@ public abstract class GlobalConfig
                 // configure currencies
                 root.getAsJsonArray("currencies").forEach(inferior -> {
                     final var currencyJson = inferior.getAsJsonObject();
-                    final var remoteIdentity = new Remote.Identity(null, currencyJson.getAsJsonPrimitive("remote_id").getAsString());
-                    final var remote = api.getRemoteRepository().retrieve(remoteIdentity);
+
+                    final var remoteIdentifier = currencyJson.getAsJsonPrimitive("remote_id")
+                            .getAsString();
+                    final var remote = api.getRemoteRepository().retrieve(remoteIdentifier);
                     if(remote == null)
-                        throw new IllegalStateException("No such remote identified by " + remoteIdentity);
+                        throw new IllegalStateException("No such remote identified by " + remoteIdentifier);
 
                     final var currency = Currency.builder()
                             .identifier(currencyJson.getAsJsonPrimitive("id").getAsString())
@@ -129,9 +135,9 @@ public abstract class GlobalConfig
                     final var limit = root.getAsJsonPrimitive("wealth_check_account_limit");
                     final var timer = root.getAsJsonPrimitive("wealth_check_every_minutes");
                     if(timer != null)
-                        CrownedBankConstants.setWealthyCheckMillis(timer.getAsLong() * 60 * 1000); // to seconds, to milliseconds
+                        CrownedBank.setWealthyCheckMillis(timer.getAsLong() * 60 * 1000); // to seconds, to milliseconds
                     if(limit != null)
-                        CrownedBankConstants.setWealthyCheckAccountLimit(limit.getAsInt());
+                        CrownedBank.setWealthyCheckAccountLimit(limit.getAsInt());
                 }
 
             }

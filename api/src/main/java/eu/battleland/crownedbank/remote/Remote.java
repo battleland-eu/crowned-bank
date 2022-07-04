@@ -16,14 +16,15 @@ import java.util.concurrent.CompletableFuture;
  * Remote. Stores, retrieves accounts. Handles transactions of remote accounts.
  */
 public interface Remote
-        extends Identifiable<Remote.Identity> {
+        extends Identifiable<String> {
 
     /**
      * Configure remote.
      *
      * @param profile Profile.
+     * @return Itself.
      */
-    void configure(@NonNull Profile profile);
+    Remote configure(@NonNull Profile profile);
 
     /**
      * Store account state in remote.
@@ -74,55 +75,19 @@ public interface Remote
                                              final Currency.Storage currencyStorage,
                                              float amount);
 
+
     /**
-     * Remote identity
+     * Remote factory.
      */
-    public static final class Identity {
-
-        private final String type;
-        private String id;
-
-        /**
-         */
-        public Identity(String type, String id) {
-            this.type = type;
-            this.id = id;
-        }
-
-        @Override
-        public String toString() {
-            return String.format("%s(type: %s)", id, type);
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (obj instanceof Identity other)
-                // return true if type is not null AND it is equal to other OR if id is not null and is equal to other
-                return this.type != null && Objects.equals(this.type, other.type) || this.id != null && Objects.equals(this.id, other.id);
-            return false;
-        }
-
-        public String type() {
-            return type;
-        }
-
-        public void id(String id) {
-            this.id = id;
-        }
-
-        public String id() {
-            return id;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(type, id);
-        }
+    interface Factory extends Identifiable<String> {
+        Remote build(final Profile profile);
     }
 
     /**
-     * Remote profile
+     * Remote profile.
+     * @param id Unique Remote identifier.
+     * @param parameters Remote parameters.
      */
-    public static record Profile(String id, JsonObject parameters) {}
+    record Profile(String id, JsonObject parameters) {}
 
 }

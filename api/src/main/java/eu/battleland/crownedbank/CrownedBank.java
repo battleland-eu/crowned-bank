@@ -15,7 +15,7 @@ import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
 
-public class CrownedBankConstants {
+public class CrownedBank {
 
     @Getter
     @Setter(AccessLevel.PROTECTED)

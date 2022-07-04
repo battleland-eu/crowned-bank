@@ -15,12 +15,12 @@ public class AccountTests {
 
     @Test
     public void testThreadSafety() throws ExecutionException, InterruptedException {
-
         final var identity = new Account.Identity(UUID.randomUUID(), "name");
         final Account account = Account.builder()
                 .identity(identity)
                 .withdrawHandler((storage, amount, accountRef) -> storage.withdraw(amount))
                 .depositHandler((storage, amount, accountRef) -> storage.deposit(amount))
+
                 .build();
         final var currency = Currency.builder()
                 .identifier("cookies")
