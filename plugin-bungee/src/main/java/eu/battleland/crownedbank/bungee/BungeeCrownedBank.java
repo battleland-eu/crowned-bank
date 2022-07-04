@@ -1,8 +1,8 @@
 package eu.battleland.crownedbank.bungee;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.CurrencyRepository;
-import eu.battleland.crownedbank.RemoteRepository;
+import eu.battleland.crownedbank.repo.CurrencyRepository;
+import eu.battleland.crownedbank.repo.RemoteRepository;
 import eu.battleland.crownedbank.remote.SqlRemote;
 import lombok.Getter;
 import net.md_5.bungee.api.plugin.Listener;
@@ -12,24 +12,26 @@ public class BungeeCrownedBank
         extends CrownedBankAPI.Base
         implements Listener {
 
-    private final Plugin plugin;
-
     @Getter
-    private final CurrencyRepository currencyRepository
-            = new CurrencyRepository();
-    @Getter
-    private final RemoteRepository remoteRepository
-            = new RemoteRepository();
-
+    private static Plugin pluginInstance;
 
     public BungeeCrownedBank(Plugin plugin) {
-        this.plugin = plugin;
+        pluginInstance = plugin;
 
+        // register remote factories
         {
-            final var remote = new SqlRemote();
-            getRemoteRepository()
-                    .register(remote);
-            this.setRemote(remote);
+            getRemoteFactoryRepository()
+                    .register(SqlRemote.factory());
         }
+    }
+
+    @Override
+    public void initialize() throws Exception {
+
+    }
+
+    @Override
+    public void terminate() {
+
     }
 }

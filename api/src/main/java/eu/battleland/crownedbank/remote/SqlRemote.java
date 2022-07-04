@@ -3,9 +3,10 @@ package eu.battleland.crownedbank.remote;
 import com.google.gson.JsonParser;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
-import eu.battleland.crownedbank.CrownedBankConstants;
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
+import lombok.Getter;
 import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -17,9 +18,8 @@ import java.util.function.Predicate;
 public class SqlRemote
         implements Remote {
 
+    private final String identifier;
 
-    private Remote.Identity identifier
-            = new Identity("sql", null);
     private final HikariConfig config
             = new HikariConfig();
     private HikariDataSource dataSource;
@@ -31,10 +31,6 @@ public class SqlRemote
             create table if not exists `%s_data`
               ( `identity_name` TEXT NOT NULL , `identity_uuid` TEXT NOT NULL , `json_data` TEXT NOT NULL , UNIQUE (`identity_name`), UNIQUE (`identity_uuid`));
             """;
-    private String fetchWealthyCommand = """
-            select `identity_name`, `identity_uuid`, `json_data`, JSON_EXTRACT(`json_data`, '$.currencies.%2$s') as worth
-            from `%1$s_data` order by worth desc limit %3$d
-            """;
     private String storeCommand = """
             insert into `%s_data` (`identity_name`,`identity_uuid`,`json_data`) values('%s','%s','%s')
             on duplicate key update json_data='%4$s'
@@ -43,15 +39,31 @@ public class SqlRemote
             select `json_data` from `%s_data`
             where `identity_name`='%s' OR `identity_uuid`='%s'
             """;
+    private String fetchWealthyCommand = """
+            select `identity_name`, `identity_uuid`, `json_data`, JSON_EXTRACT(`json_data`, '$.%2$s') as worth
+            from `%1$s_data` order by worth desc limit %3$d
+            """;
 
+    public SqlRemote(@NonNull String identifier) {
+        this.identifier = identifier;
+    }
 
-    @Override
-    public @NonNull Remote.Identity identifier() {
-        return identifier;
+    public static Factory factory() {
+        return new Factory() {
+            @Override
+            public Remote build(Profile profile) {
+                return new SqlRemote(profile.id()).configure(profile);
+            }
+
+            @Override
+            public @NonNull String identifier() {
+                return "sql";
+            }
+        };
     }
 
     @Override
-    public void configure(@NonNull Profile profile) {
+    public Remote configure(@NonNull Profile profile) {
         final var data = profile.parameters();
 
         if (!data.has("jdbc_url")
@@ -83,7 +95,12 @@ public class SqlRemote
             throw new IllegalStateException(e);
         }
 
-        this.identifier.id(profile.id());
+        return this;
+    }
+
+    @Override
+    public @NonNull String identifier() {
+        return this.identifier;
     }
 
     @Override
@@ -145,14 +162,14 @@ public class SqlRemote
                          String.format(fetchWealthyCommand,
                                  tablePrefix,
                                  currency.identifier(),
-                                 CrownedBankConstants.getWealthyCheckAccountLimit()
+                                 CrownedBank.getWealthyCheckAccountLimit()
                          ))) {
                 final var list = new ArrayList<Account>();
                 if(result.getFetchSize() == 0)
                     return list;
 
                 do {
-                    final var account = CrownedBankConstants.GSON
+                    final var account = CrownedBank.GSON
                             .fromJson(result.getString("json_data"), Account.class);
                     list.add(account);
                 } while (result.next());

@@ -5,6 +5,9 @@ import eu.battleland.crownedbank.helper.TransactionHandler;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
+import eu.battleland.crownedbank.repo.CurrencyRepository;
+import eu.battleland.crownedbank.repo.RemoteFactoryRepository;
+import eu.battleland.crownedbank.repo.RemoteRepository;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
@@ -14,13 +17,11 @@ import org.jetbrains.annotations.NotNull;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutionException;
 
 /**
  * Crowned Bank API
  */
 public interface CrownedBankAPI {
-
 
     /**
      * Creates account.
@@ -57,6 +58,11 @@ public interface CrownedBankAPI {
      */
     CurrencyRepository getCurrencyRepository();
 
+    /**
+     * @return Remote factory repository.
+     */
+    RemoteFactoryRepository getRemoteFactoryRepository();
+
 
     /**
      * @return Map of grouped currencies by their respective remotes.
@@ -68,10 +74,10 @@ public interface CrownedBankAPI {
      * Implementation base
      */
     abstract class Base
-            implements CrownedBankAPI {
+            implements CrownedBankAPI, Controllable {
 
         {
-            CrownedBankConstants.setApi(this);
+            CrownedBank.setApi(this);
         }
 
         @Getter
@@ -100,6 +106,18 @@ public interface CrownedBankAPI {
         @Getter(AccessLevel.PUBLIC)
         @Setter(AccessLevel.PROTECTED)
         private long lastWealthCheck = 0;
+
+
+        @Getter
+        private final CurrencyRepository currencyRepository
+                = new CurrencyRepository();
+        @Getter
+        private final RemoteRepository remoteRepository
+                = new RemoteRepository();
+        @Getter
+        private final RemoteFactoryRepository remoteFactoryRepository
+                = new RemoteFactoryRepository();
+
 
         @Override
         public Account account(@NonNull Account.Identity identity) {
@@ -134,8 +152,6 @@ public interface CrownedBankAPI {
 
         @Override
         public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity) {
-            Objects.requireNonNull(remote, "Remote not present");
-
             // Return cached account
             if (this.cachedAccounts.containsKey(identity))
                 return CompletableFuture.completedFuture(this.cachedAccounts.get(identity));
@@ -176,7 +192,7 @@ public interface CrownedBankAPI {
 
         @Override
         public CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency) {
-            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBankConstants.getWealthyCheckMillis()
+            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBank.getWealthyCheckMillis()
                     || !this.wealthyAccounts.containsKey(currency); // trigger check if outdated or not present
             if (!triggerCheck)
                 return CompletableFuture.completedFuture(this.wealthyAccounts.get(currency));
@@ -187,7 +203,7 @@ public interface CrownedBankAPI {
 
                 final var future = CompletableFuture.supplyAsync(() -> {
                     try {
-                        final var result = this.remote.fetchWealthyAccounts(currency).get();
+                        final var result = currency.getRemote().fetchWealthyAccounts(currency).get();
 
                         this.wealthyAccounts.put(currency, result);
                         this.wealthyAccountsFuture = null;

@@ -31,11 +31,7 @@ public abstract class Repository<I, T extends Identifiable<I>> {
      * @return Entry.
      */
     public T retrieve(final I id) {
-        for (Map.Entry<I, T> itEntry : entries.entrySet()) {
-            if (itEntry.getKey().equals(id))
-                return itEntry.getValue();
-        }
-        return null;
+        return this.entries.get(id);
     }
 
     /**

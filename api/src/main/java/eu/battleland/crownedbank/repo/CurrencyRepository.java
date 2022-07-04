@@ -1,4 +1,4 @@
-package eu.battleland.crownedbank;
+package eu.battleland.crownedbank.repo;
 
 import com.google.common.collect.ImmutableSet;
 import eu.battleland.crownedbank.abstracted.Repository;

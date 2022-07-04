@@ -1,7 +1,7 @@
 package eu.battleland.crownedbank.model;
 
 import com.google.gson.JsonObject;
-import eu.battleland.crownedbank.CrownedBankConstants;
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.helper.TransactionHandler;
 import eu.battleland.crownedbank.remote.Remote;
 import lombok.Builder;
@@ -13,7 +13,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
 import java.util.logging.Logger;
@@ -132,7 +131,7 @@ public class Account {
             // iterate through currencies, create storage, and assign them to account data.
             {
                 json.entrySet().forEach(entry -> {
-                    final var currency = CrownedBankConstants.getApi()
+                    final var currency = CrownedBank.getApi()
                             .getCurrencyRepository()
                             .retrieve(entry.getKey());
                     if (currency == null)
@@ -202,7 +201,7 @@ public class Account {
          * Equals operator
          *
          * @param o Other object.
-         * @return Boolean true if identity matches by uuid. If {@link CrownedBankConstants#isIdentityNameMajor()} is set to true, returns boolean true if identity matches by name.
+         * @return Boolean true if identity matches by uuid. If {@link CrownedBank#isIdentityNameMajor()} is set to true, returns boolean true if identity matches by name.
          */
         @Override
         public boolean equals(Object o) {
@@ -211,18 +210,18 @@ public class Account {
 
             Identity identity = (Identity) o;
 
-            if (CrownedBankConstants.isIdentityNameMajor())
+            if (CrownedBank.isIdentityNameMajor())
                 return Objects.equals(name, identity.name);
             else
                 return Objects.equals(uuid, identity.uuid);
         }
 
         /**
-         * @return Returns hash code of uuid. If {@link CrownedBankConstants#isIdentityNameMajor()} is set to true, returns hash code of name instead.
+         * @return Returns hash code of uuid. If {@link CrownedBank#isIdentityNameMajor()} is set to true, returns hash code of name instead.
          */
         @Override
         public int hashCode() {
-            return CrownedBankConstants.isIdentityNameMajor() ? name.hashCode() : uuid.hashCode();
+            return CrownedBank.isIdentityNameMajor() ? name.hashCode() : uuid.hashCode();
         }
     }
 
