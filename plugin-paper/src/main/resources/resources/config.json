@@ -19,7 +19,6 @@
       }
     }
   ],
-
   "currencies": [
     {
       "id": "coins",
@@ -44,10 +43,8 @@
       "remote_id": "bungeecord"
     }
   ],
-
   "major_currency": "coins",
   "minor_currency": "tokens",
-
   "wealth_check_every_minutes": 10,
   "wealth_check_account_limit": 25
 }

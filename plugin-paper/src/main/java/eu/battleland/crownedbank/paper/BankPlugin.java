@@ -1,6 +1,5 @@
 package eu.battleland.crownedbank.paper;
 
-import cloud.commandframework.CloudCapability;
 import cloud.commandframework.arguments.standard.FloatArgument;
 import cloud.commandframework.arguments.standard.StringArgument;
 import cloud.commandframework.bukkit.CloudBukkitCapabilities;
@@ -10,18 +9,17 @@ import cloud.commandframework.paper.PaperCommandManager;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.config.GlobalConfig;
 import eu.battleland.crownedbank.model.Currency;
+import eu.battleland.crownedbank.paper.bridge.PlaceholderExpansion;
 import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
-import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
-import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
 import java.io.InputStream;
@@ -84,6 +82,7 @@ public class BankPlugin
         }
 
         commands();
+        placeholders();
 
         // initialize configuration
         try {
@@ -106,6 +105,13 @@ public class BankPlugin
 
     }
 
+
+    public void placeholders() {
+        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+            log.info("Registered PlaceholderAPI Expansion");
+            new PlaceholderExpansion().register();
+        }
+    }
 
     public void commands() {
         final var root = this.commandManager
