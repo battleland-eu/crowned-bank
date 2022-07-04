@@ -31,10 +31,6 @@ public class SqlRemote
             create table if not exists `%s_data`
               ( `identity_name` TEXT NOT NULL , `identity_uuid` TEXT NOT NULL , `json_data` TEXT NOT NULL , UNIQUE (`identity_name`), UNIQUE (`identity_uuid`));
             """;
-    private String fetchWealthyCommand = """
-            select `identity_name`, `identity_uuid`, `json_data`, JSON_EXTRACT(`json_data`, '$.currencies.%2$s') as worth
-            from `%1$s_data` order by worth desc limit %3$d
-            """;
     private String storeCommand = """
             insert into `%s_data` (`identity_name`,`identity_uuid`,`json_data`) values('%s','%s','%s')
             on duplicate key update json_data='%4$s'
@@ -42,6 +38,10 @@ public class SqlRemote
     private String fetchCommand = """
             select `json_data` from `%s_data`
             where `identity_name`='%s' OR `identity_uuid`='%s'
+            """;
+    private String fetchWealthyCommand = """
+            select `identity_name`, `identity_uuid`, `json_data`, JSON_EXTRACT(`json_data`, '$.%2$s') as worth
+            from `%1$s_data` order by worth desc limit %3$d
             """;
 
     public SqlRemote(@NonNull String identifier) {

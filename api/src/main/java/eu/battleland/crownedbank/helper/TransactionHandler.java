@@ -5,6 +5,7 @@ import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
 import lombok.NonNull;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.FutureTask;
@@ -30,18 +31,20 @@ public interface TransactionHandler {
     /**
      * Relays withdraw transactions directly to remote.
      *
+     * @param remote Default remote.
      * @return Relay
      */
-    public static @NonNull TransactionHandler.RemoteWithdrawTransactionRelay remoteWithdrawRelay(@NonNull Remote remote) {
+    public static @NonNull TransactionHandler.RemoteWithdrawTransactionRelay remoteWithdrawRelay(@Nullable Remote remote) {
         return new RemoteWithdrawTransactionRelay(remote);
     }
 
     /**
      * Relays deposit transactions directly to remote.
      *
+     * @param remote Default remote.
      * @return Relay
      */
-    public static @NonNull TransactionHandler.RemoteDepositTransactionRelay remoteDepositRelay(@NonNull Remote remote) {
+    public static @NonNull TransactionHandler.RemoteDepositTransactionRelay remoteDepositRelay(@Nullable  Remote remote) {
         return new RemoteDepositTransactionRelay(remote);
     }
 
@@ -73,6 +76,9 @@ public interface TransactionHandler {
             var remote = currency.getCurrency().getRemote();
             if (remote == null)
                 remote = this.remote;
+            if(remote == null)
+                return false;
+
             try {
                 return remote.handleWithdraw(account, currency, amount).get();
             } catch (Exception ignored) {

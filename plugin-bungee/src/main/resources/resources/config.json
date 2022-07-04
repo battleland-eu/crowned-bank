@@ -2,7 +2,7 @@
   "remotes": [
 
     {
-      "id": "main",
+      "id": "database",
       "type": "sql",
       "parameters": {
         "jdbc_url": "jdbc:mysql://localhost:3306/test",
@@ -12,7 +12,6 @@
         "tablePrefix": "crownedbank"
       }
     },
-
     {
       "id": "secondary",
       "type": "sql",
@@ -27,6 +26,18 @@
 
   ],
   "currencies": [
+
+    {
+      "id": "coins",
+      "namePlural": {
+        "text": "Coins"
+      },
+      "nameSingular": {
+        "text": "Coin"
+      },
+      "format": "%.2f",
+      "remote_id": "database"
+    },
     {
       "id": "tokens",
       "namePlural": {
@@ -36,10 +47,11 @@
         "text": "Token"
       },
       "format": "%.2f",
-      "remote_id": "main"
+      "remote_id": "secondary"
     }
+
   ],
-  "major_currency": "tokens",
+  "major_currency": "coins",
   "minor_currency": "tokens",
   "wealth_check_every_minutes": 10,
   "wealth_check_account_limit": 25

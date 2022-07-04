@@ -23,7 +23,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public interface CrownedBankAPI {
 
-
     /**
      * Creates account.
      *
@@ -47,8 +46,6 @@ public interface CrownedBankAPI {
      * @return Future list of dummy accounts. May be from cache, or remote.
      */
     CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency);
-
-
 
 
     /**
@@ -155,8 +152,6 @@ public interface CrownedBankAPI {
 
         @Override
         public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity) {
-            Objects.requireNonNull(remote, "Remote not present");
-
             // Return cached account
             if (this.cachedAccounts.containsKey(identity))
                 return CompletableFuture.completedFuture(this.cachedAccounts.get(identity));
@@ -208,7 +203,7 @@ public interface CrownedBankAPI {
 
                 final var future = CompletableFuture.supplyAsync(() -> {
                     try {
-                        final var result = this.remote.fetchWealthyAccounts(currency).get();
+                        final var result = currency.getRemote().fetchWealthyAccounts(currency).get();
 
                         this.wealthyAccounts.put(currency, result);
                         this.wealthyAccountsFuture = null;

@@ -20,6 +20,11 @@ dependencies {
     // in-house
     implementation(project(":api"))
 
+    // cloud
+    implementation 'cloud.commandframework:cloud-paper:1.7.0'
+    implementation 'cloud.commandframework:cloud-brigadier:1.7.0'
+
+
     // paperweight
     paperweightDevelopmentBundle("io.papermc.paper:dev-bundle:1.18.1-R0.1-SNAPSHOT")
 }
@@ -27,6 +32,7 @@ dependencies {
 
 shadowJar {
     archiveFileName = "crownedbank-paper.jar"
+    relocate 'cloud.commandframework', 'eu.battleland.crownedbank.libs.cloud.commandframework'
 }
 tasks.named("build") { dependsOn(tasks.named("shadowJar")) }
 
@@ -34,6 +40,16 @@ bukkit {
     main = "eu.battleland.crownedbank.paper.BankPlugin"
     name = "CrownedBankPaper"
     apiVersion = "1.18"
+    permissions {
+        'crownedbank.admin' {
+            description = 'Administrator permission.'
+            setDefault('OP')
+        }
+        'crownedbank.player' {
+            description = 'Player permission.'
+            setDefault('TRUE')
+        }
+    }
 }
 
 publishing {
