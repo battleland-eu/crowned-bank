@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank.paper.remote;
 
 import com.google.common.io.ByteStreams;
+import com.google.gson.JsonParser;
 import eu.battleland.crownedbank.CrownedBankConstants;
 import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.model.Account;
@@ -24,11 +25,14 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
 
 @Log4j2
 public class ProxyRemote
         implements Remote, Listener {
 
+    private Remote.Identity identifier
+            = new Identity("proxy", null);
 
     private final BankPlugin plugin;
 
@@ -37,7 +41,7 @@ public class ProxyRemote
     private final Map<Account.Identity, CompletableFuture<Pair<Boolean, Float>>> depositFutures
             = new ConcurrentHashMap<>();
 
-    private final Map<Account.Identity, CompletableFuture<Account>> fetchFutures
+    private final Map<Account.Identity, CompletableFuture<Account.Data>> fetchFutures
             = new ConcurrentHashMap<>();
     private CompletableFuture<List<Account>> fetchWealthyFuture;
 
@@ -64,15 +68,15 @@ public class ProxyRemote
             try {
                 // read sub-channel
                 final var sub = stream.readUTF();
-                if(!ProxyConstants.SUB_CHANNEL.equals(sub))
+                if (!ProxyConstants.SUB_CHANNEL.equals(sub))
                     return;
 
                 // read operation
                 final var op = ProxyOperation
                         .values()[stream.readByte()];
 
-                if(op == ProxyOperation.FETCH_WEALTHY_RESPONSE) {
-                    if(fetchWealthyFuture == null) {
+                if (op == ProxyOperation.FETCH_WEALTHY_RESPONSE) {
+                    if (fetchWealthyFuture == null) {
                         log.warn("Fetch wealthy response received, but not expected.");
                         return;
                     }
@@ -97,7 +101,7 @@ public class ProxyRemote
                         case FETCH_RESPONSE -> {
                             final var future
                                     = this.fetchFutures.remove(identity);
-                            if(future == null) {
+                            if (future == null) {
                                 log.warn("Fetch response for '{}' received, but not expected.", identity);
                                 return;
                             }
@@ -108,8 +112,10 @@ public class ProxyRemote
                                 future.complete(null);
                                 log.error("Fetched null account '{}'", identity);
                             } else {
+                                final var json = JsonParser.parseString(response)
+                                        .getAsJsonObject();
                                 final var account
-                                        = CrownedBankConstants.GSON.fromJson(response, Account.class);
+                                        = Account.Data.decode(json, Predicate.isEqual(this));
 
                                 future.complete(account);
                                 log.info("Fetched account for '{}'", identity);
@@ -121,7 +127,7 @@ public class ProxyRemote
                                     stream.readBoolean(),
                                     stream.readFloat()
                             );
-                            if(withdrawFuture == null) {
+                            if (withdrawFuture == null) {
                                 log.warn("Withdraw response for '{}' received but not expected. ({};{})",
                                         identity, data.getFirst(), data.getSecond()
                                 );
@@ -136,7 +142,7 @@ public class ProxyRemote
                                     stream.readBoolean(),
                                     stream.readFloat()
                             );
-                            if(depositFuture == null) {
+                            if (depositFuture == null) {
                                 log.warn("Deposit response for '{}' received but not expected. ({};{})",
                                         identity, data.getFirst(), data.getSecond()
                                 );
@@ -154,8 +160,8 @@ public class ProxyRemote
     }
 
     @Override
-    public @NonNull String identifier() {
-        return "proxy";
+    public @NonNull Remote.Identity identifier() {
+        return identifier;
     }
 
     @Override
@@ -177,6 +183,8 @@ public class ProxyRemote
                 throw new IllegalStateException("Invalid address: " + address);
             }
         }
+
+        this.identifier.id(profile.id());
     }
 
     @Override
@@ -185,8 +193,8 @@ public class ProxyRemote
     }
 
     @Override
-    public CompletableFuture<@Nullable Account> fetchAccount(@NonNull Account.Identity identity) {
-        final var future = new CompletableFuture<Account>();
+    public CompletableFuture<Account.@Nullable Data> fetchAccount(@NonNull Account.Identity identity) {
+        final var future = new CompletableFuture<Account.Data>();
         this.fetchFutures.put(identity, future);
 
         // request account from proxy
@@ -204,8 +212,7 @@ public class ProxyRemote
                 log.error("There's nobody online. I can't send message through to proxy.");
             });
         }
-
-        return future.orTimeout(10, TimeUnit.SECONDS);
+        return future;
     }
 
     @Override
@@ -233,10 +240,9 @@ public class ProxyRemote
     }
 
     @Override
-    public CompletableFuture<Pair<Boolean, Float>> handleWithdraw(@NonNull Account account,
-                                                                  Currency currency,
-                                                                  float amount,
-                                                                  CompletableFuture<Void> postHandler) {
+    public CompletableFuture<Boolean> handleWithdraw(final Account account,
+                                                     final Currency.Storage currencyStorage,
+                                                     final float amount) {
         final var future = new CompletableFuture<Pair<Boolean, Float>>();
         this.withdrawFutures.put(account.getIdentity(), future);
 
@@ -249,7 +255,7 @@ public class ProxyRemote
             // identity
             data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
             // currency identifier
-            data.writeUTF(currency.identifier());
+            data.writeUTF(currencyStorage.getCurrency().identifier());
             // amount
             data.writeFloat(amount);
 
@@ -260,14 +266,22 @@ public class ProxyRemote
             });
         }
 
-        return future.orTimeout(10, TimeUnit.SECONDS);
+        // when proxy responds, handle it
+        return future.thenApply((data) -> {
+            final var result = data.getFirst();
+            if (result == null)
+                return false;
+
+            currencyStorage.change(data.getSecond());
+            return result;
+        });
     }
 
+
     @Override
-    public CompletableFuture<Pair<Boolean, Float>> handleDeposit(@NonNull Account account,
-                                                                 Currency currency,
-                                                                 float amount,
-                                                                 CompletableFuture<Void> postHandler) {
+    public CompletableFuture<Boolean> handleDeposit(final Account account,
+                                                    final Currency.Storage currencyStorage,
+                                                    final float amount) {
         final var future = new CompletableFuture<Pair<Boolean, Float>>();
         this.depositFutures.put(account.getIdentity(), future);
 
@@ -280,7 +294,7 @@ public class ProxyRemote
             // identity
             data.writeUTF(CrownedBankConstants.GSON.toJson(account.getIdentity()));
             // currency identifier
-            data.writeUTF(currency.identifier());
+            data.writeUTF(currencyStorage.getCurrency().identifier());
             // amount
             data.writeFloat(amount);
 
@@ -290,6 +304,15 @@ public class ProxyRemote
                 log.error("There's nobody online. I can't send message through to proxy.");
             });
         }
-        return future.orTimeout(10, TimeUnit.SECONDS);
+
+        // when proxy responds, handle it
+        return future.thenApply((data) -> {
+            final var result = data.getFirst();
+            if (result == null)
+                return false;
+
+            currencyStorage.change(data.getSecond());
+            return result;
+        });
     }
 }

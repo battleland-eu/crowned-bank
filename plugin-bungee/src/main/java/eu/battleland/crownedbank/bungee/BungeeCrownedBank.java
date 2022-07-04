@@ -3,7 +3,7 @@ package eu.battleland.crownedbank.bungee;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.CurrencyRepository;
 import eu.battleland.crownedbank.RemoteRepository;
-import eu.battleland.crownedbank.remote.DatabaseRemote;
+import eu.battleland.crownedbank.remote.SqlRemote;
 import lombok.Getter;
 import net.md_5.bungee.api.plugin.Listener;
 import net.md_5.bungee.api.plugin.Plugin;
@@ -26,7 +26,7 @@ public class BungeeCrownedBank
         this.plugin = plugin;
 
         {
-            final var remote = new DatabaseRemote();
+            final var remote = new SqlRemote();
             getRemoteRepository()
                     .register(remote);
             this.setRemote(remote);

@@ -10,7 +10,7 @@ import lombok.Setter;
  * Remote repository.
  */
 public class RemoteRepository
-    extends Repository<Remote> {
+    extends Repository<Remote.Identity, Remote> {
 
     @Getter @Setter
     private static Remote defaultRemote;
@@ -30,7 +30,7 @@ public class RemoteRepository
      * @return Remote instance.
      */
     @Override
-    public Remote retrieve(String id) {
+    public Remote retrieve(Remote.Identity id) {
         return super.retrieve(id);
     }
 

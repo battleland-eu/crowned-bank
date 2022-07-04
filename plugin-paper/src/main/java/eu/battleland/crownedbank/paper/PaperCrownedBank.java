@@ -4,7 +4,7 @@ import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.CurrencyRepository;
 import eu.battleland.crownedbank.RemoteRepository;
 import eu.battleland.crownedbank.paper.remote.ProxyRemote;
-import eu.battleland.crownedbank.remote.DatabaseRemote;
+import eu.battleland.crownedbank.remote.SqlRemote;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
@@ -42,7 +42,7 @@ public class PaperCrownedBank
             getRemoteRepository()
                     .register(proxyRemote);
         }
-        final var databaseRemote = new DatabaseRemote();
+        final var databaseRemote = new SqlRemote();
         {
             getRemoteRepository()
                     .register(databaseRemote);

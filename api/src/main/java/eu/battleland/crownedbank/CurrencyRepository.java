@@ -8,7 +8,7 @@ import eu.battleland.crownedbank.model.Currency;
  * Currency repository.
  */
 public class CurrencyRepository
-    extends Repository<Currency> {
+    extends Repository<String, Currency> {
 
     /**
      * Register currency.

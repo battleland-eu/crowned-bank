@@ -2,16 +2,18 @@
   "remotes": [
     {
       "id": "database",
+      "type": "sql",
       "parameters": {
-        "jdbcUrl": "jdbc:mysql://localhost:3306/test",
+        "jdbc_url": "jdbc:mysql://localhost:3306/test",
         "username": "root",
         "password": "",
-        "poolSize": 10,
-        "tablePrefix": "crownedbank"
+        "pool_size": 10,
+        "table_prefix": "crownedbank"
       }
     },
     {
-      "id": "proxy",
+      "id": "bungeecord",
+      "type": "proxy",
       "parameters": {
         "accept_configuration": true
       }
@@ -27,7 +29,8 @@
       "nameSingular": {
         "text": "Coin"
       },
-      "format": "%.2f"
+      "format": "%.2f",
+      "remote_id": "database"
     },
     {
       "id": "tokens",
@@ -37,7 +40,8 @@
       "nameSingular": {
         "text": "Token"
       },
-      "format": "%.2f"
+      "format": "%.2f",
+      "remote_id": "bungeecord"
     }
   ],
 

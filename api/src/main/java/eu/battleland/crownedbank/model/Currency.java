@@ -14,7 +14,7 @@ import java.util.Objects;
  */
 @Builder
 public class Currency
-    implements Identifiable {
+    implements Identifiable<String> {
 
     /**
      * Major currency to be used.
@@ -43,6 +43,10 @@ public class Currency
         return this.identifier;
     }
 
+    public @NonNull Currency.Storage newStorage() {
+        return new Storage(this);
+    }
+
     /**
      * Compare this instance with instance {@code o} or compare identifiers.
      *
@@ -62,5 +66,67 @@ public class Currency
     @Override
     public int hashCode() {
         return identifier != null ? identifier.hashCode() : 0;
+    }
+
+    /**
+     * Storage of currency.
+     */
+    public static class Storage {
+
+        @Getter
+        private final Currency currency;
+        private volatile float value = 0;
+
+        /**
+         * New Instance of currency storage.
+         *
+         * @param currency Currency.
+         */
+        public Storage(final Currency currency) {
+            this.currency = currency;
+        }
+
+        /**
+         * @return Amount of the currency.
+         */
+        public synchronized float amount() {
+            return value;
+        }
+
+        /**
+         * Change amount of currency.
+         *
+         * @param val Value.
+         */
+        public synchronized Storage change(float val) {
+            value = val;
+            return this;
+        }
+
+        /**
+         * Deposit an amount of currency.
+         *
+         * @param val Value.
+         * @return Boolean true if deposit was made.
+         */
+        public synchronized boolean deposit(float val) {
+            value += val;
+            return true;
+        }
+
+        /**
+         * Deposit an amount of currency.
+         *
+         * @param val Value.
+         * @return Boolean true if withdraw was made.
+         */
+        public synchronized boolean withdraw(float val) {
+            final var modified = (this.value - val);
+            if (modified >= 0) {
+                value -= val;
+                return true;
+            }
+            return false;
+        }
     }
 }

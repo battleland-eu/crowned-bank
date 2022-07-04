@@ -123,8 +123,10 @@ public class ProxyEndpoint
                                 account = null;
                             }
 
-                            if (account != null)
-                                response.writeUTF(CrownedBankConstants.GSON.toJson(account));
+                            if (account != null) {
+                                final var json = Account.Data.encode(account.getData(), (t) -> true);
+                                response.writeUTF(json.toString());
+                            }
                             else
                                 response.writeUTF("null");
 
@@ -156,10 +158,6 @@ public class ProxyEndpoint
                             } catch (Exception x) {
                                 this.plugin.getLogger().warning(String.format("Couldn't withdraw from account '%s'.", identity));
                                 x.printStackTrace();
-
-                                // decline withdraw
-                                response.writeBoolean(false);
-                                response.writeFloat(0);
                             }
                         }
                         case DEPOSIT_REQUEST -> {
@@ -188,10 +186,6 @@ public class ProxyEndpoint
                             } catch (Exception x) {
                                 this.plugin.getLogger().warning(String.format("Couldn't deposit to account '%s'.", identity));
                                 x.printStackTrace();
-
-                                // decline deposit
-                                response.writeBoolean(false);
-                                response.writeFloat(0);
                             }
                         }
                     }
