@@ -21,16 +21,15 @@ public interface TransactionHandler {
      * @param currency    Currency.
      * @param amount      Amount.
      * @param account     Account.
-     * @param postHandler Post-transaction handler.
      * @return response   Transaction's response.
      */
-    Pair<Boolean, Float> handle(@NotNull Currency currency,
-                                @NotNull Float amount,
-                                @NotNull Account account,
-                                CompletableFuture<Void> postHandler);
+    boolean handle(@NotNull Currency.Storage currency,
+                   @NotNull Float amount,
+                   @NotNull Account account);
 
     /**
      * Relays withdraw transactions directly to remote.
+     *
      * @return Relay
      */
     public static @NonNull TransactionHandler.RemoteWithdrawTransactionRelay remoteWithdrawRelay(@NonNull Remote remote) {
@@ -39,6 +38,7 @@ public interface TransactionHandler {
 
     /**
      * Relays deposit transactions directly to remote.
+     *
      * @return Relay
      */
     public static @NonNull TransactionHandler.RemoteDepositTransactionRelay remoteDepositRelay(@NonNull Remote remote) {
@@ -67,17 +67,16 @@ public interface TransactionHandler {
         }
 
         @Override
-        public Pair<Boolean, Float> handle(@NotNull Currency currency,
-                                           @NotNull Float amount,
-                                           @NotNull Account account,
-                                           CompletableFuture<Void> postHandler) {
-            var remote = currency.getRemote();
+        public boolean handle(@NotNull Currency.Storage currency,
+                                    @NotNull Float amount,
+                                    @NotNull Account account) {
+            var remote = currency.getCurrency().getRemote();
             if (remote == null)
                 remote = this.remote;
             try {
-                return remote.handleWithdraw(account, currency, amount, postHandler).get();
+                return remote.handleWithdraw(account, currency, amount).get();
             } catch (Exception ignored) {
-                return null;
+                return false;
             }
         }
     }
@@ -94,17 +93,16 @@ public interface TransactionHandler {
 
 
         @Override
-        public Pair<Boolean, Float> handle(@NotNull Currency currency,
+        public boolean handle(@NotNull Currency.Storage currency,
                                            @NotNull Float amount,
-                                           @NotNull Account account,
-                                           CompletableFuture<Void> postHandler) {
-            var remote = currency.getRemote();
+                                           @NotNull Account account) {
+            var remote = currency.getCurrency().getRemote();
             if (remote == null)
                 remote = this.remote;
             try {
-                return remote.handleDeposit(account, currency, amount, postHandler).get();
+                return remote.handleDeposit(account, currency, amount).get();
             } catch (Exception x) {
-               return null;
+                return false;
             }
         }
     }

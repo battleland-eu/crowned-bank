@@ -27,8 +27,7 @@ public abstract class GlobalConfig
         this.configFile = configFile;
     }
 
-    @Override
-    public void initialize() throws Exception {
+    public FileReader streamConfiguration() throws Exception {
         // create configuration file
         // in filesystem, if it does not exist.
         if (!configFile.exists()) {
@@ -53,22 +52,32 @@ public abstract class GlobalConfig
             }
         }
 
+        // stream configuration from filesystem
+        return new FileReader(configFile);
+    }
+
+    @Override
+    public void initialize() throws Exception {
         // read configuration
-        try (final var stream = new FileReader(configFile)) {
+        try (final var stream = streamConfiguration()) {
             final var root = JsonParser.parseReader(stream).getAsJsonObject();
             {
                 // configure remotes
                 root.getAsJsonArray("remotes").forEach(profileJson -> {
                     final var remoteProfile = profileJson.getAsJsonObject();
+                    final var remoteIdentity = new Remote.Identity(remoteProfile.getAsJsonPrimitive("type").getAsString(),
+                            remoteProfile.getAsJsonPrimitive("id").getAsString());
+
                     final var profile = new Remote.Profile(
-                            remoteProfile.getAsJsonPrimitive("id").getAsString(),
+                            remoteIdentity.id(),
                             remoteProfile.getAsJsonObject("parameters")
                     );
 
                     final var remote = api.getRemoteRepository()
-                            .retrieve(profile.id());
+                            .retrieve(remoteIdentity);
+
                     if (remote == null)
-                        throw new IllegalStateException("No such remote identified by " + profile.id());
+                        throw new IllegalStateException("No such remote type " + remoteIdentity);
                     remote.configure(profile);
                 });
 
@@ -77,11 +86,17 @@ public abstract class GlobalConfig
                 // configure currencies
                 root.getAsJsonArray("currencies").forEach(inferior -> {
                     final var currencyJson = inferior.getAsJsonObject();
+                    final var remoteIdentity = new Remote.Identity(null, currencyJson.getAsJsonPrimitive("remote_id").getAsString());
+                    final var remote = api.getRemoteRepository().retrieve(remoteIdentity);
+                    if(remote == null)
+                        throw new IllegalStateException("No such remote identified by " + remoteIdentity);
+
                     final var currency = Currency.builder()
                             .identifier(currencyJson.getAsJsonPrimitive("id").getAsString())
                             .namePlural(componentDeserializer.deserializeFromTree(currencyJson.get("namePlural")))
                             .nameSingular(componentDeserializer.deserializeFromTree(currencyJson.get("nameSingular")))
                             .format(currencyJson.getAsJsonPrimitive("format").getAsString())
+                            .remote(remote)
                             .build();
 
                     api.getCurrencyRepository()

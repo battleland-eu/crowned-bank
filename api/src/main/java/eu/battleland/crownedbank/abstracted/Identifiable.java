@@ -3,8 +3,8 @@ package eu.battleland.crownedbank.abstracted;
 import lombok.NonNull;
 
 @FunctionalInterface
-public interface Identifiable {
+public interface Identifiable<I> {
 
-    @NonNull String identifier();
+    @NonNull I identifier();
 
 }

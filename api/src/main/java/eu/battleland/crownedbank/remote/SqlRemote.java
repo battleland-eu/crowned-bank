@@ -1,9 +1,9 @@
 package eu.battleland.crownedbank.remote;
 
+import com.google.gson.JsonParser;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import eu.battleland.crownedbank.CrownedBankConstants;
-import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import lombok.NonNull;
@@ -12,11 +12,14 @@ import org.jetbrains.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.logging.Logger;
+import java.util.function.Predicate;
 
-public class DatabaseRemote
+public class SqlRemote
         implements Remote {
 
+
+    private Remote.Identity identifier
+            = new Identity("sql", null);
     private final HikariConfig config
             = new HikariConfig();
     private HikariDataSource dataSource;
@@ -43,28 +46,28 @@ public class DatabaseRemote
 
 
     @Override
-    public @NonNull String identifier() {
-        return "database";
+    public @NonNull Remote.Identity identifier() {
+        return identifier;
     }
 
     @Override
     public void configure(@NonNull Profile profile) {
         final var data = profile.parameters();
 
-        if (!data.has("jdbcUrl")
+        if (!data.has("jdbc_url")
                 && !data.has("username")
                 && !data.has("password")
-                && !data.has("poolSize")) {
-            throw new IllegalStateException("Data are missing a required field. (jdbcUrl, username, password, poolSize)");
+                && !data.has("pool_size")) {
+            throw new IllegalStateException("Data are missing a required field. (jdbc_url, username, password, pool_size)");
         }
         {
-            config.setJdbcUrl(data.getAsJsonPrimitive("jdbcUrl")
+            config.setJdbcUrl(data.getAsJsonPrimitive("jdbc_url")
                     .getAsString());
             config.setUsername(data.getAsJsonPrimitive("username")
                     .getAsString());
             config.setPassword(data.getAsJsonPrimitive("password")
                     .getAsString());
-            config.setMaximumPoolSize(data.getAsJsonPrimitive("poolSize")
+            config.setMaximumPoolSize(data.getAsJsonPrimitive("pool_size")
                     .getAsInt());
         }
         this.dataSource = new HikariDataSource(this.config);
@@ -79,6 +82,8 @@ public class DatabaseRemote
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
+
+        this.identifier.id(profile.id());
     }
 
     @Override
@@ -87,12 +92,16 @@ public class DatabaseRemote
             final var identity = account.getIdentity();
             try (final var connection = this.dataSource.getConnection();
                  final var statement = connection.createStatement()) {
+
+                final var json = Account.Data
+                        .encode(account.getData(), Predicate.isEqual(this));
+
                 return statement.execute(
                         String.format(storeCommand,
                                 tablePrefix,
                                 identity.name(),
                                 identity.uuid().toString(),
-                                CrownedBankConstants.GSON.toJson(account)
+                                json
                         ));
             } catch (Exception x) {
                 x.printStackTrace();
@@ -102,7 +111,7 @@ public class DatabaseRemote
     }
 
     @Override
-    public CompletableFuture<@Nullable Account> fetchAccount(@NonNull Account.Identity identity) {
+    public CompletableFuture<Account.@Nullable Data> fetchAccount(@NonNull Account.Identity identity) {
         return CompletableFuture.supplyAsync(() -> {
             try (final var connection = this.dataSource.getConnection();
                  final var statement = connection.createStatement();
@@ -114,10 +123,15 @@ public class DatabaseRemote
                          ))) {
                 if(result.getFetchSize() == 0)
                     return null;
-                return CrownedBankConstants.GSON.fromJson(result.getString("json_data"), Account.class);
+
+                final var json = JsonParser
+                        .parseString(result.getString("json_data"))
+                        .getAsJsonObject();
+
+                return Account.Data.decode(json, Predicate.isEqual(this));
             } catch (Exception x) {
                 x.printStackTrace();
-                throw new IllegalStateException("Communication failure.");
+                return null;
             }
         });
     }
@@ -152,24 +166,16 @@ public class DatabaseRemote
     }
 
     @Override
-    public CompletableFuture<Pair<Boolean, Float>> handleWithdraw(Account account,
-                                                                  Currency currency,
-                                                                  float amount,
-                                                                  CompletableFuture<Void> post) {
-        post.thenAccept((future) -> {
-            this.storeAccount(account);
-        });
-
+    public CompletableFuture<Boolean> handleWithdraw(final Account account,
+                                                     final Currency.Storage currencyStorage,
+                                                     final float amount) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                final float currentAmount = account.status(currency);
-                final float newAmount = currentAmount - amount;
-                if(newAmount < 0)
-                    return Pair.of(false, currentAmount);
-                else {
-                    storeAccount(account).get(); // store account in database
-                    return Pair.of(true, newAmount);
-                }
+               if(currencyStorage.withdraw(amount)) {
+                   storeAccount(account);
+                   return true;
+               } else
+                   return false;
             } catch (Exception x) {
                 throw new IllegalStateException(x);
             }
@@ -177,20 +183,16 @@ public class DatabaseRemote
     }
 
     @Override
-    public CompletableFuture<Pair<Boolean, Float>> handleDeposit(Account account,
-                                                                 Currency currency,
-                                                                 float amount,
-                                                                 CompletableFuture<Void> post) {
-        post.thenAccept((future) -> {
-            this.storeAccount(account);
-        });
-
+    public CompletableFuture<Boolean> handleDeposit(Account account, Currency.Storage currencyStorage, float amount) {
         return CompletableFuture.supplyAsync(() -> {
             try {
-                return Pair.of(true, account.status(currency) + amount);
+                if(currencyStorage.deposit(amount)) {
+                    storeAccount(account);
+                    return true;
+                } else
+                    return false;
             } catch (Exception x) {
-                x.printStackTrace();
-                throw new IllegalStateException("Communication failure.");
+                throw new IllegalStateException(x);
             }
         });
     }

@@ -7,15 +7,17 @@ import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Repository of identifiable entries.
+ *
  * @param <T> Type of Entry
  */
-public abstract class Repository<T extends Identifiable> {
+public abstract class Repository<I, T extends Identifiable<I>> {
 
-    private final Map<String, T> entries
+    private final Map<I, T> entries
             = new ConcurrentHashMap<>();
 
     /**
      * Register entry.
+     *
      * @param entry Entry.
      */
     public void register(final T entry) {
@@ -24,11 +26,16 @@ public abstract class Repository<T extends Identifiable> {
 
     /**
      * Retrieve registered entry.
+     *
      * @param id Identifier.
      * @return Entry.
      */
-    public T retrieve(final String id) {
-        return this.entries.get(id);
+    public T retrieve(final I id) {
+        for (Map.Entry<I, T> itEntry : entries.entrySet()) {
+            if (itEntry.getKey().equals(id))
+                return itEntry.getValue();
+        }
+        return null;
     }
 
     /**

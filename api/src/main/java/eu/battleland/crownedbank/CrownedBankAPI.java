@@ -1,5 +1,6 @@
 package eu.battleland.crownedbank;
 
+import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.helper.TransactionHandler;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
@@ -10,11 +11,10 @@ import lombok.NonNull;
 import lombok.Setter;
 import org.jetbrains.annotations.NotNull;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
+import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 
 /**
  * Crowned Bank API
@@ -23,7 +23,7 @@ public interface CrownedBankAPI {
 
 
     /**
-     * Creates dummy account.
+     * Creates account.
      *
      * @param identity Identity.
      * @return Account.
@@ -56,6 +56,12 @@ public interface CrownedBankAPI {
      * @return Currency repository.
      */
     CurrencyRepository getCurrencyRepository();
+
+
+    /**
+     * @return Map of grouped currencies by their respective remotes.
+     */
+    Map<Remote, List<Currency>> currenciesByRemotes();
 
 
     /**
@@ -95,7 +101,6 @@ public interface CrownedBankAPI {
         @Setter(AccessLevel.PROTECTED)
         private long lastWealthCheck = 0;
 
-
         @Override
         public Account account(@NonNull Account.Identity identity) {
             return Account.builder()
@@ -107,59 +112,65 @@ public interface CrownedBankAPI {
 
 
         @Override
+        public Map<Remote, List<Currency>> currenciesByRemotes() {
+            final var result = new HashMap<Remote, List<Currency>>();
+            this.getCurrencyRepository().all().forEach((currency -> {
+                var remote = currency.getRemote();
+                if (remote == null)
+                    remote = this.remote;
+
+                result.computeIfAbsent(remote, (r) -> {
+                    final var array = new ArrayList<Currency>();
+                    array.add(currency);
+                    return array;
+                } );
+                result.computeIfPresent(remote, (r, array) -> {
+                    array.add(currency);
+                    return array;
+                });
+            }));
+            return result;
+        }
+
+        @Override
         public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity) {
             Objects.requireNonNull(remote, "Remote not present");
 
-            // return cached account
+            // Return cached account
             if (this.cachedAccounts.containsKey(identity))
                 return CompletableFuture.completedFuture(this.cachedAccounts.get(identity));
 
             synchronized (this) {
-                // check if account is already being retrieved,
+                // Check if account is already being retrieved,
                 // if yes, return it's future
-                final var existingFuture
-                        = this.accountFutures.get(identity);
-                if (existingFuture != null)
-                    return existingFuture; // return existing future
+                {
+                    final var existingFuture
+                            = this.accountFutures.get(identity);
+                    if (existingFuture != null)
+                        return existingFuture; // return existing future
+                }
 
-                // fetch account from remote
-                final var future = CompletableFuture.supplyAsync(() -> {
-                    Account dummyAccount = null;
-                    try {
-                        final var fetchFuture = this.remote.fetchAccount(identity);
+                {
+                    // Fetch the account from remotes
+                    final var future = CompletableFuture.supplyAsync(() -> {
+                        final var account = account(identity);
+                        currenciesByRemotes().forEach((remote, currencies) -> {
+                            try {
+                                final var data = remote.fetchAccount(identity).get();
+                                if(data != null)
+                                    account.getData().join(data);
 
-                        try {
-                            dummyAccount = fetchFuture.get(); // fetch dummy
-                        } catch (Exception x) {
-                            x.printStackTrace();
-                        }
+                            } catch (Exception e) {
+                                throw new RuntimeException(e);
+                            }
+                        });
 
-                        if(fetchFuture.isCompletedExceptionally())
-                            return null; // exception occurred when fetching user, they might have an account...
-
-                        Account liveAccount = account(identity);
-                        if (dummyAccount == null)
-                            this.remote.storeAccount(liveAccount); // create new account for user
-                        else
-                            liveAccount.feedFromDummy(dummyAccount); // feed from existing dummy account
-
-                        this.cachedAccounts.put(identity, liveAccount);
-
-                        // supply account
-                        return liveAccount;
-                    } catch (Exception e) {
-                        e.printStackTrace();
-                        return null;
-                    } finally {
-                        synchronized (this) {
-                            this.accountFutures.remove(identity); // remove account future
-                        }
-                    }
-                });
-
-                // store account future
-                this.accountFutures.put(identity, future);
-                return future;
+                        return account;
+                    });
+                    // Store the account retrieval future
+                    this.accountFutures.put(identity, future);
+                    return future;
+                }
             }
         }
 
