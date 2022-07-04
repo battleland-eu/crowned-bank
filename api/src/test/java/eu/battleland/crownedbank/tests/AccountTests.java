@@ -19,18 +19,8 @@ public class AccountTests {
         final var identity = new Account.Identity(UUID.randomUUID(), "name");
         final Account account = Account.builder()
                 .identity(identity)
-                .withdrawHandler((currency, amount, accountRef, post) -> {
-                    final var status = accountRef.status(currency);
-                    try {
-                        Thread.sleep(new Random().nextInt(100));
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
-                    if(status - amount < 0)
-                        return Pair.of(false, status);
-                    return Pair.of(true, status - amount);
-                })
-                .depositHandler((currency, amount, accountRef, post) -> Pair.of(true, accountRef.status(currency) + amount))
+                .withdrawHandler((storage, amount, accountRef) -> storage.withdraw(amount))
+                .depositHandler((storage, amount, accountRef) -> storage.deposit(amount))
                 .build();
         final var currency = Currency.builder()
                 .identifier("cookies")
