@@ -29,14 +29,14 @@ import java.util.stream.Collectors;
 
 
 @Log4j2
-public class BankPlugin
+public class PaperBankPlugin
         extends JavaPlugin {
 
     /**
      * Plugin instance.
      */
     @Getter
-    private static BankPlugin instance;
+    private static PaperBankPlugin instance;
 
     {
         instance = this;
@@ -60,7 +60,7 @@ public class BankPlugin
             = new GlobalConfig(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
-            return BankPlugin.this.getResource("resources/config.json");
+            return PaperBankPlugin.this.getResource("resources/config.json");
         }
     };
 
@@ -131,7 +131,17 @@ public class BankPlugin
                 .commandBuilder("crownedbank", "bank", "cb")
                 .permission("crownedbank.admin");
 
+        // root command
+        {
+            this.commandManager.command(root.handler(ctx -> {
+                ctx.getSender().sendMessage(
+                        Component.text("CrownedBank's Paper implementation version: " + this.getDescription().getVersion())
+                                .color(NamedTextColor.LIGHT_PURPLE)
+                );
+            }));
+        }
 
+        // cache command
         {
             final var cacheRoot = root.literal("cache");
             this.commandManager.command(cacheRoot.literal("invalidate")
@@ -141,6 +151,7 @@ public class BankPlugin
                     }));
         }
 
+        // reload command
         {
             this.commandManager.command(root.literal("reload")
                     .handler(ctx -> {
@@ -149,6 +160,7 @@ public class BankPlugin
                     }));
         }
 
+        // withdraw command
         this.commandManager.command(root.literal("withdraw")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
@@ -183,6 +195,7 @@ public class BankPlugin
                 }));
 
 
+        // deposit command
         this.commandManager.command(root.literal("deposit")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
@@ -215,6 +228,8 @@ public class BankPlugin
                         });
                     }));
                 }));
+
+        // status command
         this.commandManager.command(root.literal("status")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")

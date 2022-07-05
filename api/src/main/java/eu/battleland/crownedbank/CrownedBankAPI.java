@@ -50,7 +50,6 @@ public interface CrownedBankAPI {
      */
     CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency);
 
-
     /**
      * @return Remote repository.
      */
@@ -229,6 +228,7 @@ public interface CrownedBankAPI {
                         });
 
                         this.accountCache.put(account);
+                        this.accountFutures.remove(identity);
                         return account;
                     });
                     // Store the account retrieval future

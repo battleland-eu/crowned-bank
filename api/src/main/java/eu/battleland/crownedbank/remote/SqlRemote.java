@@ -147,15 +147,13 @@ public class SqlRemote
                                  identity.name(),
                                  identity.uuid().toString()
                          ))) {
-                if(result.getFetchSize() == 0)
+                if(result.next()) {
+                    final var json = JsonParser
+                            .parseString(result.getString("json_data"))
+                            .getAsJsonObject();
+                    return Account.Data.decode(json, Predicate.isEqual(this));
+                } else
                     return null;
-
-                final var json = JsonParser
-                        .parseString(result.getString("json_data"))
-                        .getAsJsonObject();
-                CrownedBank.getLogger().warning(json.toString());
-
-                return Account.Data.decode(json, Predicate.isEqual(this));
             } catch (Exception x) {
                 throw new IllegalStateException("Couldn't fetch account", x);
             }

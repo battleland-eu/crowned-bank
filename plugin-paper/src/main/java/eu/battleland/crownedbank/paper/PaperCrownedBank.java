@@ -29,7 +29,7 @@ public class PaperCrownedBank
         implements Listener {
 
     @Getter
-    private static BankPlugin pluginInstance;
+    private static PaperBankPlugin pluginInstance;
 
     @Getter
     private TranslationRegistry<Component> translationRegistry
@@ -69,7 +69,7 @@ public class PaperCrownedBank
      *
      * @param plugin Plugin instance.
      */
-    public PaperCrownedBank(@NonNull BankPlugin plugin) {
+    public PaperCrownedBank(@NonNull PaperBankPlugin plugin) {
         pluginInstance = plugin;
 
         // register remote factories
