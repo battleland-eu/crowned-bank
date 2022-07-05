@@ -83,7 +83,7 @@ public class ProxyEndpoint
                     try {
                         final Currency currency = plugin
                                 .getApi()
-                                .getCurrencyRepository()
+                                .currencyRepository()
                                 .retrieve(request.readUTF());
 
                         final var accounts = plugin.getApi()
@@ -143,7 +143,7 @@ public class ProxyEndpoint
                             try {
                                 final Currency currency = plugin
                                         .getApi()
-                                        .getCurrencyRepository()
+                                        .currencyRepository()
                                         .retrieve(request.readUTF());
                                 if (currency == null)
                                     throw new Exception("Unknown currency");
@@ -171,7 +171,7 @@ public class ProxyEndpoint
                             try {
                                 final Currency currency = plugin
                                         .getApi()
-                                        .getCurrencyRepository()
+                                        .currencyRepository()
                                         .retrieve(request.readUTF());
                                 if (currency == null)
                                     throw new Exception("Unknown currency");

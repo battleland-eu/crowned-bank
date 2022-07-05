@@ -55,7 +55,7 @@ public class CrownedBank {
                 final var map = new HashMap<Currency, Float>();
                 final var object = json.getAsJsonObject();
                 object.entrySet().forEach((entry) -> {
-                    final Currency currency = getApi().getCurrencyRepository().retrieve(entry.getKey());
+                    final Currency currency = getApi().currencyRepository().retrieve(entry.getKey());
                     if (currency == null)
                         throw new IllegalStateException("Unregistered currency: " + entry.getKey());
 

@@ -86,15 +86,9 @@ public class BankPlugin
             }
         }
 
-        commands();
-        placeholders();
-
-        // initialize configuration
-        try {
-            configuration.initialize();
-        } catch (Exception e) {
-            log.error("Couldn't initialize global configuration", e);
-        }
+        this.commands();
+        this.placeholders();
+        this.configuration();
 
         // register service
         {
@@ -108,6 +102,15 @@ public class BankPlugin
     @Override
     public void onDisable() {
 
+    }
+
+    private void configuration() {
+        // initialize configuration
+        try {
+            configuration.initialize();
+        } catch (Exception e) {
+            log.error("Couldn't initialize global configuration", e);
+        }
     }
 
     /**
@@ -128,10 +131,28 @@ public class BankPlugin
                 .commandBuilder("crownedbank", "bank", "cb")
                 .permission("crownedbank.admin");
 
+
+        {
+            final var cacheRoot = root.literal("cache");
+            this.commandManager.command(cacheRoot.literal("invalidate")
+                    .handler(ctx -> {
+                        this.api.accountCache().invalidate();
+                        ctx.getSender().sendMessage(Component.text("Cache invalidated.").color(NamedTextColor.GREEN));
+                    }));
+        }
+
+        {
+            this.commandManager.command(root.literal("reload")
+                    .handler(ctx -> {
+                        this.configuration();
+                        ctx.getSender().sendMessage(Component.text("Configuration reloaded.").color(NamedTextColor.GREEN));
+                    }));
+        }
+
         this.commandManager.command(root.literal("withdraw")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
-                        .withSuggestionsProvider((ctx, label) -> api.getCurrencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
+                        .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
                 .argument(FloatArgument.of("amount"))
                 .handler(ctx -> {
                     final var sender = ctx.getSender();
@@ -139,7 +160,7 @@ public class BankPlugin
                     final String currencyIdentifier = ctx.get("currency");
                     final float currencyAmount = ctx.get("amount");
 
-                    final Currency currency = api.getCurrencyRepository().retrieve(currencyIdentifier);
+                    final Currency currency = api.currencyRepository().retrieve(currencyIdentifier);
                     if (currency == null) {
                         sender.sendMessage(Component.text("Invalid currency.")
                                 .color(NamedTextColor.RED));
@@ -165,7 +186,7 @@ public class BankPlugin
         this.commandManager.command(root.literal("deposit")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
-                        .withSuggestionsProvider((ctx, label) -> api.getCurrencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
+                        .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
                 .argument(FloatArgument.of("amount"))
                 .handler(ctx -> {
                     final var sender = ctx.getSender();
@@ -173,7 +194,7 @@ public class BankPlugin
                     final String currencyIdentifier = ctx.get("currency");
                     final float currencyAmount = ctx.get("amount");
 
-                    final Currency currency = api.getCurrencyRepository().retrieve(currencyIdentifier);
+                    final Currency currency = api.currencyRepository().retrieve(currencyIdentifier);
                     if (currency == null) {
                         sender.sendMessage(Component.text("Invalid currency.")
                                 .color(NamedTextColor.RED));
@@ -197,7 +218,7 @@ public class BankPlugin
         this.commandManager.command(root.literal("status")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
-                        .withSuggestionsProvider((ctx, label) -> api.getCurrencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList()))
+                        .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList()))
                         .asOptional())
                 .handler(ctx -> {
                     final var sender = ctx.getSender();
@@ -206,7 +227,7 @@ public class BankPlugin
 
                     final Currency currency;
                     if (currencyIdentifier != null) {
-                        currency = api.getCurrencyRepository().retrieve(currencyIdentifier);
+                        currency = api.currencyRepository().retrieve(currencyIdentifier);
                     } else {
                         currency = null;
                     }
@@ -225,7 +246,7 @@ public class BankPlugin
                                     .append(Component.text(String.format(" %.2f", account.status(currency)))
                                             .color(NamedTextColor.GREEN));
                         } else {
-                            for (Currency c : api.getCurrencyRepository().all()) {
+                            for (Currency c : api.currencyRepository().all()) {
                                 response = response.append(Component.newline());
                                 response = response
                                         .append(Component.text("    - ")

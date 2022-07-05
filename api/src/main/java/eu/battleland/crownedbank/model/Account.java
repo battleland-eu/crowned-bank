@@ -16,8 +16,6 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
-import java.util.logging.LogManager;
-import java.util.logging.Logger;
 
 @Builder
 public class Account {
@@ -131,7 +129,7 @@ public class Account {
             {
                 json.entrySet().forEach(entry -> {
                     final var currency = CrownedBank.getApi()
-                            .getCurrencyRepository()
+                            .currencyRepository()
                             .retrieve(entry.getKey());
                     if (currency == null)
                         return;

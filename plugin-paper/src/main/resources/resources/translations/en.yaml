@@ -1,0 +1,3 @@
+pay.failure: "<red>Payment did not go through, try again later."
+pay.failure.funds: "<red>Payment did not go through, insufficient funds."
+pay.success: "<red>Successfully paid."

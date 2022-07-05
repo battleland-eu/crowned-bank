@@ -84,7 +84,12 @@ public class SqlRemote
             config.setMaximumPoolSize(data.getAsJsonPrimitive("pool_size")
                     .getAsInt());
         }
-        this.dataSource = new HikariDataSource(this.config);
+
+        try {
+            this.dataSource = new HikariDataSource(this.config);
+        } catch (Throwable x) {
+            CrownedBank.getLogger().severe("Couldn't establish database connection");
+        }
 
         if(data.has("table_prefix"))
             this.tablePrefix = data.getAsJsonPrimitive("table_prefix").getAsString();
@@ -95,7 +100,7 @@ public class SqlRemote
             statement.execute(String.format(tableCommand, tablePrefix));
 
             CrownedBank.getLogger()
-                    .info("Connection established to '" + config.getJdbcUrl() + "' as '" + config.getUsername() + "'");
+                    .info("Database connection established to '" + config.getJdbcUrl() + "' as '" + config.getUsername() + "'");
 
         } catch (Exception e) {
             throw new IllegalStateException(e);
@@ -148,6 +153,7 @@ public class SqlRemote
                 final var json = JsonParser
                         .parseString(result.getString("json_data"))
                         .getAsJsonObject();
+                CrownedBank.getLogger().warning(json.toString());
 
                 return Account.Data.decode(json, Predicate.isEqual(this));
             } catch (Exception x) {

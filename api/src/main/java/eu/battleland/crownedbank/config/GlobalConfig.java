@@ -76,13 +76,13 @@ public abstract class GlobalConfig
                             remoteIdentifier, remoteParameters
                     );
 
-                    final var remoteFactory = api.getRemoteFactoryRepository()
+                    final var remoteFactory = api.remoteFactoryRepository()
                             .retrieve(remoteType);
                     if (remoteFactory == null)
                         throw new IllegalStateException("No such remote factory " + remoteType);
 
                    final var remote = remoteFactory.build(remoteProfile);
-                   api.getRemoteRepository().register(remote);
+                   api.remoteRepository().register(remote);
                 });
 
                 final var componentDeserializer = GsonComponentSerializer.gson();
@@ -93,7 +93,7 @@ public abstract class GlobalConfig
 
                     final var remoteIdentifier = currencyJson.getAsJsonPrimitive("remote_id")
                             .getAsString();
-                    final var remote = api.getRemoteRepository().retrieve(remoteIdentifier);
+                    final var remote = api.remoteRepository().retrieve(remoteIdentifier);
                     if(remote == null)
                         throw new IllegalStateException("No such remote identified by " + remoteIdentifier);
 
@@ -105,28 +105,28 @@ public abstract class GlobalConfig
                             .remote(remote)
                             .build();
 
-                    api.getCurrencyRepository()
+                    api.currencyRepository()
                             .register(currency);
                 });
 
                 // configure defaults
-                final var majorCurrency = api.getCurrencyRepository()
+                final var majorCurrency = api.currencyRepository()
                         .retrieve(root.getAsJsonPrimitive("major_currency")
                                 .getAsString());
-                final var minorCurrency = api.getCurrencyRepository()
+                final var minorCurrency = api.currencyRepository()
                         .retrieve(root.getAsJsonPrimitive("major_currency")
                                 .getAsString());
 
 
                 if (majorCurrency != null) {
-                    api.getCurrencyRepository().setMajorCurrency(
+                    api.currencyRepository().setMajorCurrency(
                             majorCurrency
                     );
                 } else
                     throw new Exception("Unknown major currency");
 
                 if (minorCurrency != null) {
-                    api.getCurrencyRepository().setMinorCurrency(
+                    api.currencyRepository().setMinorCurrency(
                             minorCurrency
                     );
                 }

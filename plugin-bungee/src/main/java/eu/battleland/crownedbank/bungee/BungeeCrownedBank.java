@@ -1,8 +1,6 @@
 package eu.battleland.crownedbank.bungee;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.repo.CurrencyRepository;
-import eu.battleland.crownedbank.repo.RemoteRepository;
 import eu.battleland.crownedbank.remote.SqlRemote;
 import lombok.Getter;
 import net.md_5.bungee.api.plugin.Listener;
@@ -20,7 +18,7 @@ public class BungeeCrownedBank
 
         // register remote factories
         {
-            getRemoteFactoryRepository()
+            this.remoteFactoryRepository()
                     .register(SqlRemote.factory());
         }
 
