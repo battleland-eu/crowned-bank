@@ -31,6 +31,7 @@ public interface Remote
      *
      * @param account Account.
      * @return Boolean true if successful.
+     * @throws IllegalStateException When exception occurs.
      */
     CompletableFuture<Boolean> storeAccount(@NonNull Account account);
 
@@ -39,6 +40,7 @@ public interface Remote
      *
      * @param identity Identity of account.
      * @return Nullable account.
+     * @throws IllegalStateException When exception occurs.
      */
     CompletableFuture<Account.@Nullable Data> fetchAccount(@NonNull Account.Identity identity);
 
@@ -48,6 +50,7 @@ public interface Remote
      *
      * @param currency Currency.
      * @return List of Accounts.
+     * @throws IllegalStateException When exception occurs.
      */
     CompletableFuture<List<Account>> fetchWealthyAccounts(@NonNull Currency currency);
 
@@ -58,6 +61,7 @@ public interface Remote
      * @param currencyStorage Currency storage.
      * @param amount  Amount to withdraw.
      * @return Boolean true if withdraw from account was successful.
+     * @throws IllegalStateException When exception occurs.
      */
     CompletableFuture<Boolean> handleWithdraw(final Account account,
                                               final Currency.Storage currencyStorage,
@@ -70,6 +74,7 @@ public interface Remote
      * @param currencyStorage Currency storage.
      * @param amount  Amount to withdraw.
      * @return Boolean true if withdraw from account was successful.
+     * @throws IllegalStateException When exception occurs.
      */
     CompletableFuture<Boolean> handleDeposit(final Account account,
                                              final Currency.Storage currencyStorage,

@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 public class SqlRemote
         implements Remote {
@@ -84,13 +86,17 @@ public class SqlRemote
         }
         this.dataSource = new HikariDataSource(this.config);
 
-        if(data.has("tablePrefix"))
-            this.tablePrefix = data.getAsJsonPrimitive("tablePrefix").getAsString();
+        if(data.has("table_prefix"))
+            this.tablePrefix = data.getAsJsonPrimitive("table_prefix").getAsString();
 
         // create database
         try(final var connection = this.dataSource.getConnection();
             final var statement = connection.createStatement()) {
             statement.execute(String.format(tableCommand, tablePrefix));
+
+            CrownedBank.getLogger()
+                    .info("Connection established to '" + config.getJdbcUrl() + "' as '" + config.getUsername() + "'");
+
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -112,7 +118,6 @@ public class SqlRemote
 
                 final var json = Account.Data
                         .encode(account.getData(), Predicate.isEqual(this));
-
                 return statement.execute(
                         String.format(storeCommand,
                                 tablePrefix,
@@ -121,8 +126,7 @@ public class SqlRemote
                                 json
                         ));
             } catch (Exception x) {
-                x.printStackTrace();
-                throw new IllegalStateException("Communication failure.");
+                throw new IllegalStateException("Couldn't store account", x);
             }
         });
     }
@@ -147,8 +151,7 @@ public class SqlRemote
 
                 return Account.Data.decode(json, Predicate.isEqual(this));
             } catch (Exception x) {
-                x.printStackTrace();
-                return null;
+                throw new IllegalStateException("Couldn't fetch account", x);
             }
         });
     }
@@ -176,8 +179,7 @@ public class SqlRemote
 
                 return list;
             } catch (Exception x) {
-                x.printStackTrace();
-                throw new IllegalStateException("Communication failure.");
+                throw new IllegalStateException("Couldn't fetch wealthy accounts", x);
             }
         });
     }
@@ -194,7 +196,7 @@ public class SqlRemote
                } else
                    return false;
             } catch (Exception x) {
-                throw new IllegalStateException(x);
+                throw new IllegalStateException("Couldn't withdraw", x);
             }
         });
     }
@@ -209,7 +211,7 @@ public class SqlRemote
                 } else
                     return false;
             } catch (Exception x) {
-                throw new IllegalStateException(x);
+                throw new IllegalStateException("Couldn't withdraw", x);
             }
         });
     }

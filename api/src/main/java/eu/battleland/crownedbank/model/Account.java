@@ -7,6 +7,7 @@ import eu.battleland.crownedbank.remote.Remote;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,13 +16,11 @@ import java.util.UUID;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.BiConsumer;
 import java.util.function.Predicate;
+import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 @Builder
 public class Account {
-
-    public static final Logger LOGGER
-            = Logger.getLogger("CrownedBank");
 
     /**
      * Represents whether this account only contains data.
@@ -48,19 +47,19 @@ public class Account {
      *
      * @param currency Currency
      * @param amount   Amount
-     * @return Completable Future which completes with boolean true if withdraw was completed successfully.
+     * @return Completable Future which completes with boolean true if withdraw was completed successfully. Completes with null, on unhandled exceptions.
      */
-    public CompletableFuture<Boolean> withdraw(final Currency currency,
-                                               float amount) {
+    public CompletableFuture<@Nullable Boolean> withdraw(final Currency currency,
+                                                         float amount) {
         if (isOnlyDataShell())
             return CompletableFuture.completedFuture(false);
 
         return CompletableFuture.supplyAsync(() -> this.transaction(this.withdrawHandler, currency, amount, () -> {
-            LOGGER.info(String.format(
+            CrownedBank.getLogger().info(String.format(
                     "Successfully withdrawn '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
             ));
         }, () -> {
-            LOGGER.info(String.format(
+            CrownedBank.getLogger().info(String.format(
                     "Failed to withdraw '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
             ));
         }));
@@ -74,17 +73,17 @@ public class Account {
      * @return Completable Future which completes with boolean true if deposit was completed successfully.
      */
 
-    public CompletableFuture<Boolean> deposit(final Currency currency,
+    public CompletableFuture<@Nullable Boolean> deposit(final Currency currency,
                                               float amount) {
         if (isOnlyDataShell())
             return CompletableFuture.completedFuture(false);
 
         return CompletableFuture.supplyAsync(() -> this.transaction(this.depositHandler, currency, amount, () -> {
-            LOGGER.info(String.format(
+            CrownedBank.getLogger().info(String.format(
                     "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
             ));
         }, () -> {
-            LOGGER.info(String.format(
+            CrownedBank.getLogger().info(String.format(
                     "Failed to deposit '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
             ));
         }));
@@ -229,29 +228,40 @@ public class Account {
     /**
      * Private implementation of transaction handling.
      */
-    private synchronized boolean transaction(final TransactionHandler handler,
+    private synchronized Boolean transaction(final TransactionHandler handler,
                                              final Currency currency,
                                              final float amount,
                                              Runnable onSuccess,
                                              Runnable onFailure) {
 
 
+        boolean result;
         try {
             // call transaction handler
-            final var result = handler.handle(this.data.currencies.computeIfAbsent(currency, (t) -> currency.newStorage()), amount, this);
-            if (result) {
-                // transaction accepted
-                onSuccess.run();
-                return true;
-            } else {
-                // transaction not accepted
-                onFailure.run();
-                return false;
-            }
-        } catch (Exception x) {
+             result = handler.handle(this.data.currencies.computeIfAbsent(currency, (t) -> currency.newStorage()), amount, this);
+        } catch (final Exception x) {
+            CrownedBank.getLogger().severe("Transaction handler threw exception");
             x.printStackTrace();
-            return false;
+
+            result = false;
         }
+
+       try {
+           // transaction accepted
+           if (result) {
+               onSuccess.run();
+               return true;
+           } else {
+               // transaction not accepted
+               onFailure.run();
+               return false;
+           }
+       } catch (Exception x) {
+           CrownedBank.getLogger().severe("Transaction callbacks threw exception");
+           x.printStackTrace();
+
+            return null;
+       }
     }
 
 }

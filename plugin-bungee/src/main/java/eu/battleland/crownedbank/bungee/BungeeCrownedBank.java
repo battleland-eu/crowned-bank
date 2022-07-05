@@ -23,6 +23,7 @@ public class BungeeCrownedBank
             getRemoteFactoryRepository()
                     .register(SqlRemote.factory());
         }
+
     }
 
     @Override

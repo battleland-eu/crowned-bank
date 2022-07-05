@@ -14,12 +14,33 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
 public class CrownedBank {
 
     @Getter
     @Setter(AccessLevel.PROTECTED)
     private static CrownedBankAPI api;
+
+    @Getter
+    @Setter
+    private static Logger logger;
+
+    @Getter
+    @Setter
+    private static int remoteTimeoutMillis = 5000;
+
+    @Getter
+    @Setter
+    private static int wealthyCheckAccountLimit = 25;
+    @Getter
+    @Setter
+    private static long wealthyCheckMillis = 5 * 60 * 1000;
+
+    @Getter
+    @Setter
+    private static boolean identityNameMajor = false;
+
 
     public static final Gson GSON = new GsonBuilder()
             .registerTypeAdapterFactory(new RecordTypeAdapterFactory())
@@ -43,18 +64,6 @@ public class CrownedBank {
                 return map;
             })
             .create();
-
-    @Getter
-    @Setter
-    private static boolean identityNameMajor = false;
-
-    @Getter
-    @Setter
-    private static int wealthyCheckAccountLimit = 25;
-    @Getter
-    @Setter
-    private static long wealthyCheckMillis = 5 * 60 * 1000;
-
 
     // https://github.com/google/gson/issues/1794
     public static class RecordTypeAdapterFactory implements TypeAdapterFactory {

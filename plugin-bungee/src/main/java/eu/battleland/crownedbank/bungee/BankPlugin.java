@@ -1,5 +1,6 @@
 package eu.battleland.crownedbank.bungee;
 
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.bungee.endpoint.ProxyEndpoint;
 import eu.battleland.crownedbank.config.GlobalConfig;
@@ -45,6 +46,9 @@ public class BankPlugin
 
     @Override
     public void onLoad() {
+        CrownedBank.setLogger(this.getLogger());
+
+
         this.endpoint = new ProxyEndpoint(this);
     }
 

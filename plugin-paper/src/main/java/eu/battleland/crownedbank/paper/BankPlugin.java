@@ -6,6 +6,7 @@ import cloud.commandframework.bukkit.CloudBukkitCapabilities;
 import cloud.commandframework.bukkit.parsers.PlayerArgument;
 import cloud.commandframework.execution.AsynchronousCommandExecutionCoordinator;
 import cloud.commandframework.paper.PaperCommandManager;
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.config.GlobalConfig;
 import eu.battleland.crownedbank.model.Currency;
@@ -64,8 +65,12 @@ public class BankPlugin
     };
 
     @Override
-    public void onEnable() {
+    public void onLoad() {
+        CrownedBank.setLogger(this.getLogger());
+    }
 
+    @Override
+    public void onEnable() {
         {
             try {
                 this.commandManager = new PaperCommandManager<>(this,
@@ -105,15 +110,20 @@ public class BankPlugin
 
     }
 
-
-    public void placeholders() {
+    /**
+     * Register placeholders.
+     */
+    private void placeholders() {
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             log.info("Registered PlaceholderAPI Expansion");
             new PlaceholderExpansion().register();
         }
     }
 
-    public void commands() {
+    /**
+     * Register commands.
+     */
+    private void commands() {
         final var root = this.commandManager
                 .commandBuilder("crownedbank", "bank", "cb")
                 .permission("crownedbank.admin");
@@ -138,6 +148,11 @@ public class BankPlugin
 
                     api.retrieveAccount(PlayerIdentity.of(target)).thenAccept((account -> {
                         account.withdraw(currency, currencyAmount).thenAccept((result) -> {
+                            if(result == null) {
+                                sender.sendMessage(Component.text("Internal exception.").color(NamedTextColor.RED));
+                                return;
+                            }
+
                             sender.sendMessage(result
                                     ? Component.text(String.format("Successfully withdrawn '%.2f' %s from %s", currencyAmount, currencyIdentifier, target.getName())).color(NamedTextColor.GREEN)
                                     : Component
@@ -145,6 +160,8 @@ public class BankPlugin
                         });
                     }));
                 }));
+
+
         this.commandManager.command(root.literal("deposit")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
@@ -165,6 +182,11 @@ public class BankPlugin
 
                     api.retrieveAccount(PlayerIdentity.of(target)).thenAccept((account -> {
                         account.deposit(currency, currencyAmount).thenAccept((result) -> {
+                            if(result == null) {
+                                sender.sendMessage(Component.text("Internal exception.").color(NamedTextColor.RED));
+                                return;
+                            }
+
                             sender.sendMessage(result
                                     ? Component.text(String.format("Successfully deposited '%.2f' %s to %s", currencyAmount, currencyIdentifier, target.getName())).color(NamedTextColor.GREEN)
                                     : Component

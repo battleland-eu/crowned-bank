@@ -1,5 +1,6 @@
 package eu.battleland.crownedbank.helper;
 
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
@@ -9,9 +10,10 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.FutureTask;
+import java.util.concurrent.TimeUnit;
 
 /**
- * Transaction handler. Its layer between local account and remote account.
+ * Transaction handler. It serves as a handling layer between local and remote.
  */
 @FunctionalInterface
 public interface TransactionHandler {
@@ -19,9 +21,9 @@ public interface TransactionHandler {
     /**
      * Handle transaction.
      *
-     * @param currency    Currency.
-     * @param amount      Amount.
-     * @param account     Account.
+     * @param currency Currency.
+     * @param amount   Amount.
+     * @param account  Account.
      * @return response   Transaction's response.
      */
     boolean handle(@NotNull Currency.Storage currency,
@@ -34,7 +36,7 @@ public interface TransactionHandler {
      * @param remote Default remote.
      * @return Relay
      */
-    public static @NonNull TransactionHandler.RemoteWithdrawTransactionRelay remoteWithdrawRelay(@Nullable Remote remote) {
+    static @NonNull TransactionHandler.RemoteWithdrawTransactionRelay remoteWithdrawRelay(@Nullable Remote remote) {
         return new RemoteWithdrawTransactionRelay(remote);
     }
 
@@ -44,7 +46,7 @@ public interface TransactionHandler {
      * @param remote Default remote.
      * @return Relay
      */
-    public static @NonNull TransactionHandler.RemoteDepositTransactionRelay remoteDepositRelay(@Nullable  Remote remote) {
+    static @NonNull TransactionHandler.RemoteDepositTransactionRelay remoteDepositRelay(@Nullable Remote remote) {
         return new RemoteDepositTransactionRelay(remote);
     }
 
@@ -71,17 +73,23 @@ public interface TransactionHandler {
 
         @Override
         public boolean handle(@NotNull Currency.Storage currency,
-                                    @NotNull Float amount,
-                                    @NotNull Account account) {
+                              @NotNull Float amount,
+                              @NotNull Account account) {
             var remote = currency.getCurrency().getRemote();
             if (remote == null)
                 remote = this.remote;
-            if(remote == null)
+            if (remote == null) {
+                CrownedBank.getLogger()
+                        .severe("Remote withdraw transaction handler (relay), does not have any remote to relay to.");
                 return false;
+            }
 
             try {
-                return remote.handleWithdraw(account, currency, amount).get();
-            } catch (Exception ignored) {
+                return remote.handleWithdraw(account, currency, amount)
+                        .get(CrownedBank.getRemoteTimeoutMillis(), TimeUnit.MILLISECONDS);
+            } catch (Exception x) {
+                CrownedBank.getLogger().severe("Handling remote withdrawal threw an exception.");
+                x.printStackTrace();
                 return false;
             }
         }
@@ -100,21 +108,25 @@ public interface TransactionHandler {
 
         @Override
         public boolean handle(@NotNull Currency.Storage currency,
-                                           @NotNull Float amount,
-                                           @NotNull Account account) {
+                              @NotNull Float amount,
+                              @NotNull Account account) {
             var remote = currency.getCurrency().getRemote();
             if (remote == null)
                 remote = this.remote;
+            if (remote == null) {
+                CrownedBank.getLogger()
+                        .severe("Remote deposit transaction handler (relay), does not have any remote to relay to.");
+                return false;
+            }
+
             try {
                 return remote.handleDeposit(account, currency, amount).get();
             } catch (Exception x) {
+                CrownedBank.getLogger().severe("Handling remote deposit threw an exception.");
+                x.printStackTrace();
+
                 return false;
             }
         }
     }
-
-    record Result(boolean accepted, float status, Runnable post) {
-
-    }
-
 }
