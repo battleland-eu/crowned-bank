@@ -9,12 +9,16 @@ import cloud.commandframework.paper.PaperCommandManager;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.config.ConfigProvider;
 import eu.battleland.crownedbank.model.Currency;
+import eu.battleland.crownedbank.model.LogBook;
 import eu.battleland.crownedbank.paper.bridge.PlaceholderExpansion;
+import eu.battleland.crownedbank.paper.bridge.VaultExpansion;
 import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -23,11 +27,13 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
-@Log4j2
+@Log4j2(topic = "CrownedBank Plugin")
 public class PaperPlugin
         extends JavaPlugin {
 
@@ -48,7 +54,7 @@ public class PaperPlugin
      * API instance.
      */
     @Getter
-    private final CrownedBankAPI api
+    private final PaperCrownedBank api
             = new PaperCrownedBank(this);
 
     /**
@@ -62,7 +68,6 @@ public class PaperPlugin
             return PaperPlugin.this.getResource("resources/config.json");
         }
     };
-
 
     @Override
     public void onEnable() {
@@ -81,8 +86,10 @@ public class PaperPlugin
             }
         }
 
+        this.api.initialize();
+
         this.commands();
-        this.placeholders();
+        this.expansions();
         this.configuration();
 
         // register service
@@ -96,7 +103,7 @@ public class PaperPlugin
 
     @Override
     public void onDisable() {
-
+        this.api.terminate();
     }
 
     private void configuration() {
@@ -112,80 +119,33 @@ public class PaperPlugin
     /**
      * Register placeholders.
      */
-    private void placeholders() {
+    private void expansions() {
+
+        // PlaceholderAPI
         if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             log.info("Registered PlaceholderAPI Expansion");
             new PlaceholderExpansion().register();
         }
-    }
 
+        // VaultAPI
+        if (Bukkit.getPluginManager().getPlugin("Vault") == null) {
+            getServer().getServicesManager()
+                    .register(Economy.class, new VaultExpansion(), this, ServicePriority.Normal);
+            log.info("Registered Vault Expansion");
+        }
+    }
 
     /**
      * Register commands.
      */
-
     private void commands() {
-        final var playerCommand = this.commandManager.commandBuilder("pay")
-                .permission("crownedbank.player")
-                .argument(PlayerArgument.of("target"))
-                .argument(FloatArgument.of("amount"))
-                .argument(StringArgument.<CommandSender>newBuilder("currency")
-                        .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())).asOptional())
-                .handler(ctx -> {
-                    final Player target = ctx.get("target");
-                    final Player sender = (Player) ctx.getSender();
-                    final float amount = ctx.get("amount");
-                    final String currencyIdentifier = ctx.getOrDefault("currency",Currency.majorCurrency.identifier());
-                    final Currency currency = api.currencyRepository().retrieve(currencyIdentifier);
-                    if(currency==null)
-                    {
-                        sender.sendMessage(Component.text("Invalid currency.")
-                                .color(NamedTextColor.RED));
-                        return;
-                    }
-                    this.api.retrieveAccount(PlayerIdentity.of(sender)).thenAcceptAsync((senderAccount)->{
-                        try {
-                            final Boolean withdrawResult = senderAccount.withdraw(currency,amount).get();
-                            if(withdrawResult==null){
-                                sender.sendMessage(Component.text("Internal error")
-                                        .color(NamedTextColor.RED));
-                                return;
-                            }
-                            if(withdrawResult){
-                                this.api.retrieveAccount(PlayerIdentity.of(target)).thenAcceptAsync((targetAccount)->{
-                                    targetAccount.deposit(currency,amount);
-                                });
-                            }else{
-                                sender.sendMessage(Component.text("Insufficient funds")
-                                        .color(NamedTextColor.RED));
-                            }
-
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    });
-                });
-
-        this.commandManager.command(playerCommand);
-
-
-        final var adminCommand = this.commandManager
+        final var admin = this.commandManager
                 .commandBuilder("crownedbank", "bank", "cb")
                 .permission("crownedbank.admin");
 
-        // adminCommand command
-        /*{
-            this.commandManager.command(adminCommand.handler(ctx -> {
-                ctx.getSender().sendMessage(
-                        Component.text("CrownedBank's Paper implementation version: " + this.getDescription().getVersion())
-                                .color(NamedTextColor.LIGHT_PURPLE)
-                );
-            }));
-        }*/
-
         // cache command
         {
-            final var cacheRoot = adminCommand.literal("cache");
+            final var cacheRoot = admin.literal("cache");
             this.commandManager.command(cacheRoot.literal("invalidate")
                     .handler(ctx -> {
                         this.api.accountCache().invalidate();
@@ -195,7 +155,7 @@ public class PaperPlugin
 
         // reload command
         {
-            this.commandManager.command(adminCommand.literal("reload")
+            this.commandManager.command(admin.literal("reload")
                     .handler(ctx -> {
                         this.configuration();
                         ctx.getSender().sendMessage(Component.text("Configuration reloaded.").color(NamedTextColor.GREEN));
@@ -203,7 +163,7 @@ public class PaperPlugin
         }
 
         // withdraw command
-        this.commandManager.command(adminCommand.literal("withdraw")
+        this.commandManager.command(admin.literal("withdraw")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
                         .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
@@ -238,7 +198,7 @@ public class PaperPlugin
 
 
         // deposit command
-        this.commandManager.command(adminCommand.literal("deposit")
+        this.commandManager.command(admin.literal("deposit")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
                         .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
@@ -272,7 +232,7 @@ public class PaperPlugin
                 }));
 
         // status command
-        this.commandManager.command(adminCommand.literal("status")
+        this.commandManager.command(admin.literal("status")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
                         .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList()))
@@ -317,6 +277,83 @@ public class PaperPlugin
                         sender.sendMessage(response);
                     }));
                 }));
+
+        // root command
+        {
+            this.commandManager.command(admin.handler(ctx -> {
+                ctx.getSender().sendMessage(
+                        Component.text("CrownedBank's Paper implementation version: " + this.getDescription().getVersion())
+                                .color(NamedTextColor.LIGHT_PURPLE)
+                );
+
+                if (ctx.getSender() instanceof Player player) {
+                    log.info(player.locale());
+                }
+                Audience.audience(ctx.getSender()).sendMessage(
+                        Component.translatable("test", ctx.getSender().name())
+                );
+            }));
+        }
+
+        // pay command
+        {
+            this.commandManager.command(this.commandManager.commandBuilder("pay")
+                    .permission("crownedbank.player")
+                    .argument(PlayerArgument.of("target"))
+                    .argument(FloatArgument.of("amount"))
+                    .argument(StringArgument.<CommandSender>newBuilder("currency")
+                            .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())).asOptional())
+                    .handler(ctx -> {
+                        final Player target = ctx.get("target");
+                        final Player sender = (Player) ctx.getSender();
+
+                        final float amount = ctx.get("amount");
+
+                        // resolve currency
+                        final String currencyIdentifier = ctx.getOrDefault("currency", Currency.majorCurrency.identifier());
+                        final Currency currency = api.currencyRepository()
+                                .retrieve(currencyIdentifier);
+
+                        if (currency == null) {
+                            sender.sendMessage(Component.text("Invalid currency.")
+                                    .color(NamedTextColor.RED));
+                            return;
+                        }
+
+                        final var senderAccountFuture = this.api.retrieveAccount(PlayerIdentity.of(sender));
+                        final var targetAccountFuture = this.api.retrieveAccount(PlayerIdentity.of(target));
+                        CompletableFuture.allOf(senderAccountFuture, targetAccountFuture).thenRunAsync(() -> {
+                            try {
+                                final var senderAccount = senderAccountFuture.get();
+                                final var targetAccount = targetAccountFuture.get();
+
+                                senderAccount.pay(targetAccount, currency, amount).thenAcceptAsync((result) -> {
+                                    if (result) {
+                                        sender.sendMessage(Component.translatable("pay.sent.success",
+                                                target.name(), Component.text(amount), currency.name(amount))
+                                        );
+                                        target.sendMessage(Component.translatable("pay.received.success",
+                                                sender.name(), Component.text(amount), currency.name(amount)));
+
+                                        log.info("Payment from '{}' to '{}' completed successfully",
+                                                senderAccount.getIdentity(), targetAccount.getIdentity());
+                                    } else {
+                                        sender.sendMessage(Component.translatable("pay.failure",
+                                                target.name(), Component.text(amount), currency.name(amount))
+                                        );
+
+                                        log.info("Payment from '{}' to '{}' failed",
+                                                senderAccount.getIdentity(), targetAccount.getIdentity());
+                                    }
+                                });
+                            } catch (Exception e) {
+                                e.printStackTrace();
+                            }
+                        });
+                    }));
+        }
+
+        log.info("Initialized commands.");
     }
 
 

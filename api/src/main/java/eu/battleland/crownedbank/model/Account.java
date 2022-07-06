@@ -20,12 +20,6 @@ import java.util.function.Predicate;
 @Builder
 public class Account {
 
-    /**
-     * Represents whether this account only contains data.
-     */
-    @Getter
-    private boolean onlyDataShell;
-
     @Getter
     private Account.Identity identity;
 
@@ -41,6 +35,37 @@ public class Account {
 
 
     /**
+     * Withdraw currency from sender(calling object) and deposits it to receiver.
+     * @param receiver Receiver.
+     * @param currency Currency.
+     * @param amount   Amount of currency.
+     * @return Boolean true if successful.
+     */
+    public CompletableFuture<Boolean> pay(final Account receiver,
+                                                    final Currency currency,
+                                                    final float amount) {
+        CompletableFuture.supplyAsync(() -> {
+            final var withdrawResult = LogBook.RecordResult.byBoolean(
+                    this.transaction(withdrawHandler, currency, amount, null, null)
+            );
+
+            boolean result = false;
+            var depositResult = LogBook.RecordResult.NOT_EXECUTED;
+            if(withdrawResult.equals(LogBook.RecordResult.SUCCESS)) {
+                depositResult = LogBook.RecordResult.byBoolean(
+                        receiver.transaction(receiver.depositHandler, currency, amount, null, null)
+                );
+
+                if(depositResult.equals(LogBook.RecordResult.SUCCESS))
+                    result = true;
+            }
+
+            LogBook.logPayment(this, receiver, currency, amount, withdrawResult, depositResult);
+            return result;
+        });
+    }
+
+    /**
      * Withdraws currency from account.
      *
      * @param currency Currency
@@ -49,18 +74,20 @@ public class Account {
      */
     public CompletableFuture<@Nullable Boolean> withdraw(final Currency currency,
                                                          float amount) {
-        if (isOnlyDataShell())
-            return CompletableFuture.completedFuture(false);
+        return CompletableFuture.supplyAsync(() -> {
+            final var result = this.transaction(this.withdrawHandler, currency, amount, () -> {
+                CrownedBank.getLogger().info(String.format(
+                        "Successfully withdrawn '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
+                ));
+            }, () -> {
+                CrownedBank.getLogger().info(String.format(
+                        "Failed to withdraw '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
+                ));
+            });
 
-        return CompletableFuture.supplyAsync(() -> this.transaction(this.withdrawHandler, currency, amount, () -> {
-            CrownedBank.getLogger().info(String.format(
-                    "Successfully withdrawn '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
-            ));
-        }, () -> {
-            CrownedBank.getLogger().info(String.format(
-                    "Failed to withdraw '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
-            ));
-        }));
+            LogBook.logWithdraw(this, currency, amount, LogBook.RecordResult.byBoolean(result));
+            return result;
+        });
     }
 
     /**
@@ -73,18 +100,20 @@ public class Account {
 
     public CompletableFuture<@Nullable Boolean> deposit(final Currency currency,
                                               float amount) {
-        if (isOnlyDataShell())
-            return CompletableFuture.completedFuture(false);
+        return CompletableFuture.supplyAsync(() -> {
+            final var result = this.transaction(this.depositHandler, currency, amount, () -> {
+                CrownedBank.getLogger().info(String.format(
+                        "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
+                ));
+            }, () -> {
+                CrownedBank.getLogger().info(String.format(
+                        "Failed to deposit '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
+                ));
+            });
 
-        return CompletableFuture.supplyAsync(() -> this.transaction(this.depositHandler, currency, amount, () -> {
-            CrownedBank.getLogger().info(String.format(
-                    "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
-            ));
-        }, () -> {
-            CrownedBank.getLogger().info(String.format(
-                    "Failed to deposit '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
-            ));
-        }));
+            LogBook.logDeposit(this, currency, amount, LogBook.RecordResult.byBoolean(result));
+            return result;
+        });
     }
 
     /**

@@ -7,6 +7,7 @@ import lombok.Getter;
 import lombok.NonNull;
 import net.kyori.adventure.text.Component;
 
+import java.awt.event.ComponentEvent;
 import java.util.Objects;
 
 /**
@@ -45,6 +46,10 @@ public class Currency
 
     public @NonNull Currency.Storage newStorage() {
         return new Storage(this);
+    }
+
+    public @NonNull Component name(float amount) {
+        return amount == 0 ? namePlural: amount == 1 ? nameSingular : namePlural;
     }
 
     /**
