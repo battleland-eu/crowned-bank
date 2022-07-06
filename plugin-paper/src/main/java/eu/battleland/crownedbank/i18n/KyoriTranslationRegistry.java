@@ -47,7 +47,7 @@ public class KyoriTranslationRegistry
                     log.error("Invalid translation string '{}', are the arguments wrong?", translationString);
                 }
             });
-
+            log.info("Translations for locale '{}' registered.", locale);
         } catch (Exception x) {
             throw new IllegalStateException(x);
         }
@@ -77,7 +77,6 @@ public class KyoriTranslationRegistry
                 }
                 try {
                     result.put(locale, new FileInputStream(languageFile));
-                    log.info("Found translation source for locale {}", locale);
                 } catch (FileNotFoundException e) {
                     log.error("Couldn't access language file '{}'", languageFile.getPath());
                 }

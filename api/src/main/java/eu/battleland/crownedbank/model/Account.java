@@ -20,12 +20,6 @@ import java.util.function.Predicate;
 @Builder
 public class Account {
 
-    /**
-     * Represents whether this account only contains data.
-     */
-    @Getter
-    private boolean onlyDataShell;
-
     @Getter
     private Account.Identity identity;
 
@@ -49,9 +43,6 @@ public class Account {
      */
     public CompletableFuture<@Nullable Boolean> withdraw(final Currency currency,
                                                          float amount) {
-        if (isOnlyDataShell())
-            return CompletableFuture.completedFuture(false);
-
         return CompletableFuture.supplyAsync(() -> this.transaction(this.withdrawHandler, currency, amount, () -> {
             CrownedBank.getLogger().info(String.format(
                     "Successfully withdrawn '%.2f' %s from account '%s'.", amount, currency.identifier(), identity
@@ -73,9 +64,6 @@ public class Account {
 
     public CompletableFuture<@Nullable Boolean> deposit(final Currency currency,
                                               float amount) {
-        if (isOnlyDataShell())
-            return CompletableFuture.completedFuture(false);
-
         return CompletableFuture.supplyAsync(() -> this.transaction(this.depositHandler, currency, amount, () -> {
             CrownedBank.getLogger().info(String.format(
                     "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity

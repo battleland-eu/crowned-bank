@@ -35,28 +35,32 @@ public class CrownedBank {
     @Setter(AccessLevel.PROTECTED)
     private static CrownedBankAPI api;
 
-
     @Getter
-    @Setter
-    private static int remoteTimeoutMillis = 5000;
+    @Setter(AccessLevel.PROTECTED)
+    private static Config config = new Config(
+            5000,
+            1,
+            Integer.MAX_VALUE,
+            2,
+            20,
+            5 * 60 * 1000
+    );
 
-    @Getter
-    @Setter
-    private static int wealthCheckAccountLimit = 25;
-    @Getter
-    @Setter
-    private static long wealthCheckEveryMillis = 5 * 60 * 1000;
+
+    /**
+     * CrownedBank Configuration
+     */
+    public record Config(int remoteTimeoutMillis,
+
+                         int transactionMinValue,
+                         int transactionMaxValue,
+                         int valueFractionalDigits,
 
 
-//    public record Config(int remoteTimeoutMillis,
-//                         int remote,
-//
-//                         int wealthCheckAccountLimit,
-//                         long wealthCheckEveryMillis,
-//
-//                         ) {
-//
-//    }
+                         int wealthCheckAccountLimit,
+                         long wealthCheckEveryMillis) {
+    }
+
 
     @Getter
     @Setter

@@ -1,6 +1,8 @@
 
 ![crownedBank](https://user-images.githubusercontent.com/32541639/176990489-7ec08aab-1f3d-48ec-989e-d7d8122f50f9.png)
 [![Build Status](https://jenkins.battleland.eu/buildStatus/icon?job=BattleLand%27s+Crowned+Bank)](https://jenkins.battleland.eu/job/BattleLand's%20Crowned%20Bank/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
+
 
 A proper implementation of economy plugin both for networks and standalone servers. 
 

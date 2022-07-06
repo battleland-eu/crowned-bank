@@ -10,12 +10,14 @@ import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.config.GlobalConfig;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.bridge.PlaceholderExpansion;
+import eu.battleland.crownedbank.paper.bridge.VaultExpansion;
 import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
+import net.milkbowl.vault.economy.Economy;
 import org.bukkit.Bukkit;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
@@ -28,7 +30,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 
-@Log4j2
+@Log4j2(topic = "CrownedBank Plugin")
 public class PaperPlugin
         extends JavaPlugin {
 
@@ -84,7 +86,7 @@ public class PaperPlugin
         this.api.initialize();
 
         this.commands();
-        this.placeholders();
+        this.expansions();
         this.configuration();
 
         // register service
@@ -105,6 +107,7 @@ public class PaperPlugin
         // initialize configuration
         try {
             configuration.initialize();
+            log.info("Initialized configuration.");
         } catch (Exception e) {
             log.error("Couldn't initialize global configuration", e);
         }
@@ -113,10 +116,19 @@ public class PaperPlugin
     /**
      * Register placeholders.
      */
-    private void placeholders() {
+    private void expansions() {
+
+        // PlaceholderAPI
         if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             log.info("Registered PlaceholderAPI Expansion");
             new PlaceholderExpansion().register();
+        }
+
+        // VaultAPI
+        if (Bukkit.getPluginManager().getPlugin("Vault") == null) {
+           getServer().getServicesManager()
+                   .register(Economy.class, new VaultExpansion(), this, ServicePriority.Normal);
+            log.info("Registered Vault Expansion");
         }
     }
 
@@ -280,7 +292,7 @@ public class PaperPlugin
             }));
         }
 
-
+        log.info("Initialized commands.");
     }
 
 
