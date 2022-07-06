@@ -7,7 +7,7 @@ import cloud.commandframework.bukkit.parsers.PlayerArgument;
 import cloud.commandframework.execution.AsynchronousCommandExecutionCoordinator;
 import cloud.commandframework.paper.PaperCommandManager;
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.config.GlobalConfig;
+import eu.battleland.crownedbank.config.ConfigProvider;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.bridge.PlaceholderExpansion;
 import eu.battleland.crownedbank.paper.bridge.VaultExpansion;
@@ -58,8 +58,8 @@ public class PaperPlugin
      * Config instance.
      */
     @Getter
-    private final GlobalConfig configuration
-            = new GlobalConfig(api, new File(this.getDataFolder(), "config.json")) {
+    private final ConfigProvider configurationProvider
+            = new ConfigProvider(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
             return PaperPlugin.this.getResource("resources/config.json");
@@ -106,7 +106,7 @@ public class PaperPlugin
     private void configuration() {
         // initialize configuration
         try {
-            configuration.initialize();
+            configurationProvider.initialize();
             log.info("Initialized configuration.");
         } catch (Exception e) {
             log.error("Couldn't initialize global configuration", e);

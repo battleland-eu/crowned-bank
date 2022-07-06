@@ -127,6 +127,13 @@ public class VaultExpansion implements Economy {
         return has(player, amount);
     }
 
+    private EconomyResponse vaultTransactionRelay(final Account account, final double amount, Boolean result) {
+        final var status = account.status(Currency.majorCurrency);
+        if (result == null)
+            return new EconomyResponse(amount, status, EconomyResponse.ResponseType.FAILURE, "Internal error");
+        return new EconomyResponse(amount, status, result ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE, "");
+    }
+
     @Override
     public EconomyResponse withdrawPlayer(String playerName, final double amount) {
         try {
@@ -134,12 +141,9 @@ public class VaultExpansion implements Economy {
                     .retrieveAccount(
                             new Account.Identity(null, playerName)
                     ).thenApply(account -> account.withdraw(Currency.majorCurrency, (float) amount)
-                            .thenApply(result -> {
-                                final var status = account.status(Currency.majorCurrency);
-                                if (result == null)
-                                    return new EconomyResponse(amount, status, EconomyResponse.ResponseType.FAILURE, "Internal error");
-                                return new EconomyResponse(amount, status, result ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE, "");
-                            })).get().get();
+                            .thenApply(result ->
+                                vaultTransactionRelay(account, amount, result)
+                            )).get().get();
         } catch (Exception e) {
             return new EconomyResponse(-1, -1, EconomyResponse.ResponseType.FAILURE, "Internal Error.");
         }
@@ -168,12 +172,9 @@ public class VaultExpansion implements Economy {
                     .retrieveAccount(
                             new Account.Identity(null, playerName)
                     ).thenApply(account -> account.deposit(Currency.majorCurrency, (float) amount)
-                            .thenApply(result -> {
-                                final var status = account.status(Currency.majorCurrency);
-                                if (result == null)
-                                    return new EconomyResponse(amount, status, EconomyResponse.ResponseType.FAILURE, "Internal error");
-                                return new EconomyResponse(amount, status, result ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE, "");
-                            })).get().get();
+                            .thenApply(result ->
+                                vaultTransactionRelay(account, amount, result)
+                            )).get().get();
         } catch (Exception e) {
             return new EconomyResponse(-1, -1, EconomyResponse.ResponseType.FAILURE, "Internal Error.");
         }

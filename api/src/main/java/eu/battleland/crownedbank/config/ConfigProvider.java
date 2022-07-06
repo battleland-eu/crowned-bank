@@ -14,15 +14,15 @@ import java.io.*;
 /**
  * Global Configuration
  */
-public abstract class GlobalConfig
+public abstract class ConfigProvider
         implements Controllable {
 
     private final CrownedBankAPI api;
     private final File configFile;
 
 
-    public GlobalConfig(@NonNull CrownedBankAPI api,
-                        @NonNull File configFile) {
+    public ConfigProvider(@NonNull CrownedBankAPI api,
+                          @NonNull File configFile) {
         this.api = api;
         this.configFile = configFile;
     }

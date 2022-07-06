@@ -1,5 +1,6 @@
-package eu.battleland.crownedbank.i18n;
+package eu.battleland.crownedbank.paper.i18n;
 
+import eu.battleland.crownedbank.i18n.TranslationRegistry;
 import eu.battleland.crownedbank.paper.PaperCrownedBank;
 import io.papermc.paper.adventure.PaperAdventure;
 import lombok.Getter;

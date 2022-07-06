@@ -1,7 +1,7 @@
 package eu.battleland.crownedbank.bungee;
 
 import eu.battleland.crownedbank.bungee.endpoint.ProxyEndpoint;
-import eu.battleland.crownedbank.config.GlobalConfig;
+import eu.battleland.crownedbank.config.ConfigProvider;
 import lombok.Getter;
 import net.md_5.bungee.api.plugin.Plugin;
 
@@ -34,8 +34,8 @@ public class BungeePlugin
      * Config Instance.
      */
     @Getter
-    private final GlobalConfig configuration
-            = new GlobalConfig(api, new File(this.getDataFolder(), "config.json")) {
+    private final ConfigProvider configuration
+            = new ConfigProvider(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
             return BungeePlugin.this.getResourceAsStream("resources/config.json");

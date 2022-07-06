@@ -1,7 +1,7 @@
 package eu.battleland.crownedbank.paper;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.i18n.KyoriTranslationRegistry;
+import eu.battleland.crownedbank.paper.i18n.KyoriTranslationRegistry;
 import eu.battleland.crownedbank.i18n.TranslationRegistry;
 import eu.battleland.crownedbank.paper.remote.ProxyRemote;
 import eu.battleland.crownedbank.remote.SqlRemote;
