@@ -48,7 +48,7 @@ public interface TranslationRegistry<T>
          * @param stream Translation source.
          * @return Processed translation source.
          */
-        public abstract Map<String, T> processSource(final Locale locale, final InputStream stream);
+        public abstract Map<String, T> processSource(final @NotNull Locale locale, final InputStream stream);
 
         /**
          * @return Map of locale translation sources.

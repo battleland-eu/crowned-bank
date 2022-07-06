@@ -56,7 +56,6 @@ public class CrownedBank {
                          int transactionMaxValue,
                          int valueFractionalDigits,
 
-
                          int wealthCheckAccountLimit,
                          long wealthCheckEveryMillis) {
     }

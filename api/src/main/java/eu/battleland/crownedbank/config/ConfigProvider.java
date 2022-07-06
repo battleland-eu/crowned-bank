@@ -132,12 +132,12 @@ public abstract class ConfigProvider
                 }
 
                 {
-                    final var limit = root.getAsJsonPrimitive("wealth_check_account_limit");
-                    final var timer = root.getAsJsonPrimitive("wealth_check_every_minutes");
-                    if(timer != null)
-                        CrownedBank.setWealthCheckEveryMillis(timer.getAsLong() * 60 * 1000); // to seconds, to milliseconds
-                    if(limit != null)
-                        CrownedBank.setWealthCheckAccountLimit(limit.getAsInt());
+//                    final var limit = root.getAsJsonPrimitive("wealth_check_account_limit");
+//                    final var timer = root.getAsJsonPrimitive("wealth_check_every_minutes");
+//                    if(timer != null)
+//                        CrownedBank.setWealthyCheckMillis(timer.getAsLong() * 60 * 1000); // to seconds, to milliseconds
+//                    if(limit != null)
+//                        CrownedBank.setWealthyCheckAccountLimit(limit.getAsInt());
                 }
 
             }

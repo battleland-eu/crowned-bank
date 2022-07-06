@@ -86,7 +86,7 @@ public interface TransactionHandler {
 
             try {
                 return remote.handleWithdraw(account, currency, amount)
-                        .get(CrownedBank.getRemoteTimeoutMillis(), TimeUnit.MILLISECONDS);
+                        .get(CrownedBank.getConfig().remoteTimeoutMillis(), TimeUnit.MILLISECONDS);
             } catch (Exception x) {
                 CrownedBank.getLogger().severe("Handling remote withdrawal threw an exception.");
                 x.printStackTrace();

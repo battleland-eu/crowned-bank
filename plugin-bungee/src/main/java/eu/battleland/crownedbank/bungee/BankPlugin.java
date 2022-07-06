@@ -1,21 +1,22 @@
 package eu.battleland.crownedbank.bungee;
 
+import eu.battleland.crownedbank.CrownedBank;
+import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.bungee.endpoint.ProxyEndpoint;
 import eu.battleland.crownedbank.config.ConfigProvider;
 import lombok.Getter;
-import net.md_5.bungee.api.plugin.Plugin;
 
 import java.io.File;
 import java.io.InputStream;
 
-public class BungeePlugin
-        extends Plugin {
+public class BankPlugin
+        extends net.md_5.bungee.api.plugin.Plugin {
 
     /**
      * Plugin Instance.
      */
     @Getter
-    private static BungeePlugin instance;
+    private static BankPlugin instance;
     {
         instance = this;
     }
@@ -27,7 +28,7 @@ public class BungeePlugin
      * API Instance.
      */
     @Getter
-    private final BungeeCrownedBank api
+    private final CrownedBankAPI api
             = new BungeeCrownedBank(this);
 
     /**
@@ -38,13 +39,16 @@ public class BungeePlugin
             = new ConfigProvider(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
-            return BungeePlugin.this.getResourceAsStream("resources/config.json");
+            return BankPlugin.this.getResourceAsStream("resources/config.json");
         }
     };
 
 
     @Override
     public void onLoad() {
+        CrownedBank.setLogger(this.getLogger());
+
+
         this.endpoint = new ProxyEndpoint(this);
     }
 
@@ -59,8 +63,6 @@ public class BungeePlugin
             e.printStackTrace();
         }
 
-        this.api.initialize();
-
         // initialize endpoint
         this.endpoint.initialize();
     }
@@ -69,8 +71,6 @@ public class BungeePlugin
     public void onDisable() {
         // terminate endpoint
         this.endpoint.terminate();
-
-        this.api.terminate();
     }
 }
 

@@ -219,7 +219,7 @@ public interface CrownedBankAPI {
 
         @Override
         public CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency) {
-            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBank.getWealthCheckEveryMillis()
+            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBank.getConfig().wealthCheckEveryMillis()
                     || !this.wealthyAccounts.containsKey(currency); // trigger check if outdated or not present
             if (!triggerCheck)
                 return CompletableFuture.completedFuture(this.wealthyAccounts.get(currency));

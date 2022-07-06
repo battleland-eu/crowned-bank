@@ -6,6 +6,7 @@ import com.zaxxer.hikari.HikariDataSource;
 import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
+import lombok.Getter;
 import lombok.NonNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,6 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 public class SqlRemote
         implements Remote {
@@ -166,7 +169,7 @@ public class SqlRemote
                          String.format(fetchWealthyCommand,
                                  tablePrefix,
                                  currency.identifier(),
-                                 CrownedBank.getWealthCheckAccountLimit()
+                                 CrownedBank.getConfig().wealthCheckAccountLimit()
                          ))) {
                 final var list = new ArrayList<Account>();
                 if(result.getFetchSize() == 0)

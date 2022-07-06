@@ -3,7 +3,7 @@ package eu.battleland.crownedbank.bungee.endpoint;
 import com.google.common.io.ByteStreams;
 import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.abstracted.Controllable;
-import eu.battleland.crownedbank.bungee.BungeePlugin;
+import eu.battleland.crownedbank.bungee.BankPlugin;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.proxy.ProxyConstants;
@@ -19,14 +19,14 @@ import java.util.concurrent.CompletableFuture;
 public class ProxyEndpoint
         implements Listener, Controllable {
 
-    private final BungeePlugin plugin;
+    private final BankPlugin plugin;
 
     /**
      * Constructor.
      *
      * @param plugin Plugin Instance.
      */
-    public ProxyEndpoint(@NonNull BungeePlugin plugin) {
+    public ProxyEndpoint(@NonNull BankPlugin plugin) {
         this.plugin = plugin;
     }
 
