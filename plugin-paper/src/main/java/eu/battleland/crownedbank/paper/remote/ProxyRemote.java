@@ -6,7 +6,7 @@ import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.helper.Pair;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
-import eu.battleland.crownedbank.paper.PaperBankPlugin;
+import eu.battleland.crownedbank.paper.PaperPlugin;
 import eu.battleland.crownedbank.paper.PaperCrownedBank;
 import eu.battleland.crownedbank.proxy.ProxyConstants;
 import eu.battleland.crownedbank.proxy.ProxyOperation;
@@ -34,7 +34,7 @@ public class ProxyRemote
 
     private final String identifier;
 
-    private final PaperBankPlugin plugin;
+    private final PaperPlugin plugin;
 
     private final Map<Account.Identity, CompletableFuture<Pair<Boolean, Float>>> withdrawFutures
             = new ConcurrentHashMap<>();
@@ -52,7 +52,7 @@ public class ProxyRemote
             = InetAddress.getLoopbackAddress();
 
 
-    public ProxyRemote(@NonNull PaperBankPlugin plugin,
+    public ProxyRemote(@NonNull PaperPlugin plugin,
                        @NonNull String identifier) {
         this.plugin = plugin;
         this.identifier = identifier;

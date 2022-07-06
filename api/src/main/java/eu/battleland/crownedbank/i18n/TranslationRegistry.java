@@ -48,7 +48,7 @@ public interface TranslationRegistry<T>
          * @param stream Translation source.
          * @return Processed translation source.
          */
-        public abstract Map<String, T> processSource(final InputStream stream);
+        public abstract Map<String, T> processSource(final Locale locale, final InputStream stream);
 
         /**
          * @return Map of locale translation sources.
@@ -59,7 +59,7 @@ public interface TranslationRegistry<T>
         public void initialize() {
             this.findSources().forEach((locale, src) -> {
                 try(src) {
-                    this.processSource(src);
+                    this.processSource(locale, src);
                 } catch (Exception x) {
                     CrownedBank.getLogger().severe("Couldn't process translation source.");
                     x.printStackTrace();

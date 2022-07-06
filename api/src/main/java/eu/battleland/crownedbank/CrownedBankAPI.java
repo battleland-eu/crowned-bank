@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 /**
  * Crowned Bank API
@@ -51,6 +52,11 @@ public interface CrownedBankAPI {
     CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency);
 
     /**
+     * @return Account cache.
+     */
+    AccountCache accountCache();
+
+    /**
      * @return Remote repository.
      */
     RemoteRepository remoteRepository();
@@ -65,20 +71,11 @@ public interface CrownedBankAPI {
      */
     RemoteFactoryRepository remoteFactoryRepository();
 
-    /**
-     * @return Account cache.
-     */
-    AccountCache accountCache();
 
     /**
      * @return Translation registry.
      */
     TranslationRegistry<?> translationRegistry();
-
-    /**
-     * @return Map of grouped currencies by their respective remotes.
-     */
-    Map<Remote, List<Currency>> currenciesByRemotes();
 
 
     class AccountCache {
@@ -128,10 +125,6 @@ public interface CrownedBankAPI {
         @Setter(AccessLevel.PROTECTED)
         private Remote remote;
 
-        @Getter
-        private final AccountCache accountCache
-                = new AccountCache();
-
         @Getter(AccessLevel.PROTECTED)
         @Setter(AccessLevel.PROTECTED)
         private Map<Account.Identity, CompletableFuture<Account>> accountFutures
@@ -146,20 +139,28 @@ public interface CrownedBankAPI {
         private volatile CompletableFuture<List<Account>> wealthyAccountsFuture
                 = null;
 
-        @Getter(AccessLevel.PUBLIC)
-        @Setter(AccessLevel.PROTECTED)
-        private long lastWealthCheck = 0;
-
         @Getter
-        private final CurrencyRepository currencyRepository
-                = new CurrencyRepository();
+        private final AccountCache accountCache
+                = new AccountCache();
+
         @Getter
         private final RemoteRepository remoteRepository
                 = new RemoteRepository();
         @Getter
+        private final CurrencyRepository currencyRepository
+                = new CurrencyRepository();
+        @Getter
         private final RemoteFactoryRepository remoteFactoryRepository
                 = new RemoteFactoryRepository();
 
+        private long lastWealthCheck = 0;
+
+        protected abstract Logger provideLogger();
+
+        @Override
+        public void initialize() {
+            CrownedBank.setLogger(provideLogger());
+        }
 
         @Override
         public Account account(@NonNull Account.Identity identity) {
@@ -168,28 +169,6 @@ public interface CrownedBankAPI {
                     .depositHandler(TransactionHandler.remoteDepositRelay(this.remote))
                     .withdrawHandler(TransactionHandler.remoteWithdrawRelay(this.remote))
                     .build();
-        }
-
-
-        @Override
-        public Map<Remote, List<Currency>> currenciesByRemotes() {
-            final var result = new HashMap<Remote, List<Currency>>();
-            this.currencyRepository().all().forEach((currency -> {
-                var remote = currency.getRemote();
-                if (remote == null)
-                    remote = this.remote;
-
-                result.computeIfAbsent(remote, (r) -> {
-                    final var array = new ArrayList<Currency>();
-                    array.add(currency);
-                    return array;
-                });
-                result.computeIfPresent(remote, (r, array) -> {
-                    array.add(currency);
-                    return array;
-                });
-            }));
-            return result;
         }
 
         @Override
@@ -240,7 +219,7 @@ public interface CrownedBankAPI {
 
         @Override
         public CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency) {
-            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBank.getWealthyCheckMillis()
+            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBank.getWealthCheckEveryMillis()
                     || !this.wealthyAccounts.containsKey(currency); // trigger check if outdated or not present
             if (!triggerCheck)
                 return CompletableFuture.completedFuture(this.wealthyAccounts.get(currency));
@@ -266,6 +245,26 @@ public interface CrownedBankAPI {
                 this.wealthyAccountsFuture = future;
                 return future;
             }
+        }
+
+        public Map<Remote, List<Currency>> currenciesByRemotes() {
+            final var result = new HashMap<Remote, List<Currency>>();
+            this.currencyRepository().all().forEach((currency -> {
+                var remote = currency.getRemote();
+                if (remote == null)
+                    remote = this.remote;
+
+                result.computeIfAbsent(remote, (r) -> {
+                    final var array = new ArrayList<Currency>();
+                    array.add(currency);
+                    return array;
+                });
+                result.computeIfPresent(remote, (r, array) -> {
+                    array.add(currency);
+                    return array;
+                });
+            }));
+            return result;
         }
     }
 

@@ -16,15 +16,25 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.logging.Logger;
 
+/**
+ *
+ */
 public class CrownedBank {
 
+    /**
+     * Logger used by the API.
+     */
+    @Getter
+    @Setter(AccessLevel.PROTECTED)
+    private static Logger logger;
+
+    /**
+     * API Instance.
+     */
     @Getter
     @Setter(AccessLevel.PROTECTED)
     private static CrownedBankAPI api;
 
-    @Getter
-    @Setter
-    private static Logger logger;
 
     @Getter
     @Setter
@@ -32,10 +42,21 @@ public class CrownedBank {
 
     @Getter
     @Setter
-    private static int wealthyCheckAccountLimit = 25;
+    private static int wealthCheckAccountLimit = 25;
     @Getter
     @Setter
-    private static long wealthyCheckMillis = 5 * 60 * 1000;
+    private static long wealthCheckEveryMillis = 5 * 60 * 1000;
+
+
+//    public record Config(int remoteTimeoutMillis,
+//                         int remote,
+//
+//                         int wealthCheckAccountLimit,
+//                         long wealthCheckEveryMillis,
+//
+//                         ) {
+//
+//    }
 
     @Getter
     @Setter

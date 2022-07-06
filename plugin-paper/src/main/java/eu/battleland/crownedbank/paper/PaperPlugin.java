@@ -6,7 +6,6 @@ import cloud.commandframework.bukkit.CloudBukkitCapabilities;
 import cloud.commandframework.bukkit.parsers.PlayerArgument;
 import cloud.commandframework.execution.AsynchronousCommandExecutionCoordinator;
 import cloud.commandframework.paper.PaperCommandManager;
-import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.config.GlobalConfig;
 import eu.battleland.crownedbank.model.Currency;
@@ -14,6 +13,7 @@ import eu.battleland.crownedbank.paper.bridge.PlaceholderExpansion;
 import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
+import net.kyori.adventure.audience.Audience;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import org.bukkit.Bukkit;
@@ -29,14 +29,14 @@ import java.util.stream.Collectors;
 
 
 @Log4j2
-public class PaperBankPlugin
+public class PaperPlugin
         extends JavaPlugin {
 
     /**
      * Plugin instance.
      */
     @Getter
-    private static PaperBankPlugin instance;
+    private static PaperPlugin instance;
 
     {
         instance = this;
@@ -49,7 +49,7 @@ public class PaperBankPlugin
      * API instance.
      */
     @Getter
-    private final CrownedBankAPI api
+    private final PaperCrownedBank api
             = new PaperCrownedBank(this);
 
     /**
@@ -60,14 +60,9 @@ public class PaperBankPlugin
             = new GlobalConfig(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
-            return PaperBankPlugin.this.getResource("resources/config.json");
+            return PaperPlugin.this.getResource("resources/config.json");
         }
     };
-
-    @Override
-    public void onLoad() {
-        CrownedBank.setLogger(this.getLogger());
-    }
 
     @Override
     public void onEnable() {
@@ -86,6 +81,8 @@ public class PaperBankPlugin
             }
         }
 
+        this.api.initialize();
+
         this.commands();
         this.placeholders();
         this.configuration();
@@ -101,7 +98,7 @@ public class PaperBankPlugin
 
     @Override
     public void onDisable() {
-
+        this.api.terminate();
     }
 
     private void configuration() {
@@ -130,16 +127,6 @@ public class PaperBankPlugin
         final var root = this.commandManager
                 .commandBuilder("crownedbank", "bank", "cb")
                 .permission("crownedbank.admin");
-
-        // root command
-        {
-            this.commandManager.command(root.handler(ctx -> {
-                ctx.getSender().sendMessage(
-                        Component.text("CrownedBank's Paper implementation version: " + this.getDescription().getVersion())
-                                .color(NamedTextColor.LIGHT_PURPLE)
-                );
-            }));
-        }
 
         // cache command
         {
@@ -275,6 +262,25 @@ public class PaperBankPlugin
                         sender.sendMessage(response);
                     }));
                 }));
+
+        // root command
+        {
+            this.commandManager.command(root.handler(ctx -> {
+                ctx.getSender().sendMessage(
+                        Component.text("CrownedBank's Paper implementation version: " + this.getDescription().getVersion())
+                                .color(NamedTextColor.LIGHT_PURPLE)
+                );
+
+                if(ctx.getSender() instanceof Player player) {
+                    log.info(player.locale());
+                }
+                Audience.audience(ctx.getSender()).sendMessage(
+                        Component.translatable("test", ctx.getSender().name())
+                );
+            }));
+        }
+
+
     }
 
 

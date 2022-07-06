@@ -135,9 +135,9 @@ public abstract class GlobalConfig
                     final var limit = root.getAsJsonPrimitive("wealth_check_account_limit");
                     final var timer = root.getAsJsonPrimitive("wealth_check_every_minutes");
                     if(timer != null)
-                        CrownedBank.setWealthyCheckMillis(timer.getAsLong() * 60 * 1000); // to seconds, to milliseconds
+                        CrownedBank.setWealthCheckEveryMillis(timer.getAsLong() * 60 * 1000); // to seconds, to milliseconds
                     if(limit != null)
-                        CrownedBank.setWealthyCheckAccountLimit(limit.getAsInt());
+                        CrownedBank.setWealthCheckAccountLimit(limit.getAsInt());
                 }
 
             }

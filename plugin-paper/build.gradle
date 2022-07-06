@@ -30,6 +30,9 @@ dependencies {
     // papi
     compileOnly 'me.clip:placeholderapi:2.11.2'
 
+    // adventure
+    implementation "net.kyori:adventure-text-minimessage:4.11.0"
+
     // paperweight
     paperweightDevelopmentBundle("io.papermc.paper:dev-bundle:1.18.1-R0.1-SNAPSHOT")
 }
@@ -42,7 +45,7 @@ shadowJar {
 tasks.named("build") { dependsOn(tasks.named("shadowJar")) }
 
 bukkit {
-    main = "eu.battleland.crownedbank.paper.PaperBankPlugin"
+    main = "eu.battleland.crownedbank.paper.PaperPlugin"
     name = "CrownedBankPaper"
     apiVersion = "1.18"
     permissions {

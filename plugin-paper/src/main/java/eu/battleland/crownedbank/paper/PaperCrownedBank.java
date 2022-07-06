@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank.paper;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
+import eu.battleland.crownedbank.i18n.KyoriTranslationRegistry;
 import eu.battleland.crownedbank.i18n.TranslationRegistry;
 import eu.battleland.crownedbank.paper.remote.ProxyRemote;
 import eu.battleland.crownedbank.remote.SqlRemote;
@@ -9,15 +10,9 @@ import lombok.NonNull;
 import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import net.kyori.adventure.text.Component;
-import org.bukkit.configuration.file.YamlConfiguration;
 import org.bukkit.event.Listener;
-import org.jetbrains.annotations.NotNull;
 
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.util.HashMap;
-import java.util.Locale;
-import java.util.Map;
+import java.util.logging.Logger;
 
 /**
  * Paper implementation of the CrownedBankAPI.
@@ -29,47 +24,18 @@ public class PaperCrownedBank
         implements Listener {
 
     @Getter
-    private static PaperBankPlugin pluginInstance;
+    private static PaperPlugin pluginInstance;
 
     @Getter
-    private TranslationRegistry<Component> translationRegistry
-            = new TranslationRegistry.Base<Component>() {
-        @Override
-        public Map<String, Component> processSource(InputStream stream) {
-            final var result = new HashMap<String, Component>();
-            try(InputStreamReader reader = new InputStreamReader(stream)) {
-                final var yaml = new YamlConfiguration();
-                yaml.load(reader);
-
-            } catch (Exception x) {
-                throw new IllegalStateException(x);
-            }
-            return result;
-        }
-
-        @Override
-        public Map<Locale, InputStream> findSources() {
-            return null;
-        }
-
-        @Override
-        public Component translatable(@NotNull Locale locale, @NotNull String key) {
-            return null;
-        }
-
-        @Override
-        public Component translatable(@NotNull Locale locale, @NotNull String key, Object... params) {
-            return null;
-        }
-    };
-
+    private final TranslationRegistry<Component> translationRegistry
+            = new KyoriTranslationRegistry();
 
     /**
      * Default constructor.
      *
      * @param plugin Plugin instance.
      */
-    public PaperCrownedBank(@NonNull PaperBankPlugin plugin) {
+    public PaperCrownedBank(@NonNull PaperPlugin plugin) {
         pluginInstance = plugin;
 
         // register remote factories
@@ -84,10 +50,22 @@ public class PaperCrownedBank
 
     @Override
     public void initialize() {
+        super.initialize();
+        try {
+            this.translationRegistry.initialize();
+        } catch (Exception x) {
+            provideLogger().severe("Couldn't initialize translation registry.");
+            x.printStackTrace();
+        }
     }
 
     @Override
     public void terminate() {
 
+    }
+
+    @Override
+    protected Logger provideLogger() {
+        return pluginInstance.getLogger();
     }
 }
