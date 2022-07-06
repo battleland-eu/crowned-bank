@@ -1,3 +1,5 @@
+import java.lang.reflect.Array
+
 plugins {
     id 'java'
     id("io.papermc.paperweight.userdev") version "1.3.4"
@@ -21,6 +23,8 @@ repositories {
     maven {
         url = 'https://repo.extendedclip.com/content/repositories/placeholderapi/'
     }
+
+    maven { url 'https://jitpack.io' } // VaultAPI
 }
 
 dependencies {
@@ -31,8 +35,16 @@ dependencies {
     implementation 'cloud.commandframework:cloud-paper:1.7.0'
     implementation 'cloud.commandframework:cloud-brigadier:1.7.0'
 
+    // vault
+    compileOnly ("com.github.MilkBowl:VaultAPI:1.7") {
+        exclude group: 'org.bukkit'
+    }
+
     // papi
     compileOnly 'me.clip:placeholderapi:2.11.2'
+
+    // adventure
+    implementation "net.kyori:adventure-text-minimessage:4.11.0"
 
     // paperweight
     paperweightDevelopmentBundle("io.papermc.paper:dev-bundle:1.18.1-R0.1-SNAPSHOT")
@@ -46,9 +58,10 @@ shadowJar {
 tasks.named("build") { dependsOn(tasks.named("shadowJar")) }
 
 bukkit {
-    main = "eu.battleland.crownedbank.paper.PaperBankPlugin"
+    main = "eu.battleland.crownedbank.paper.PaperPlugin"
     name = "CrownedBankPaper"
     apiVersion = "1.18"
+    softDepend = Arrays.asList("PlaceholderAPI", "Vault")
     permissions {
         'crownedbank.admin' {
             description = 'Administrator permission.'
