@@ -1,9 +1,11 @@
 package eu.battleland.crownedbank.paper;
 
+import cloud.commandframework.Command;
 import cloud.commandframework.arguments.standard.FloatArgument;
 import cloud.commandframework.arguments.standard.StringArgument;
 import cloud.commandframework.bukkit.CloudBukkitCapabilities;
 import cloud.commandframework.bukkit.parsers.PlayerArgument;
+import cloud.commandframework.context.CommandContext;
 import cloud.commandframework.execution.AsynchronousCommandExecutionCoordinator;
 import cloud.commandframework.paper.PaperCommandManager;
 import eu.battleland.crownedbank.CrownedBank;
@@ -24,6 +26,7 @@ import org.bukkit.plugin.java.JavaPlugin;
 
 import java.io.File;
 import java.io.InputStream;
+import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -117,33 +120,79 @@ public class PaperBankPlugin
      * Register placeholders.
      */
     private void placeholders() {
-        if(Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
+        if (Bukkit.getPluginManager().getPlugin("PlaceholderAPI") != null) {
             log.info("Registered PlaceholderAPI Expansion");
             new PlaceholderExpansion().register();
         }
     }
 
+
     /**
      * Register commands.
      */
+
     private void commands() {
-        final var root = this.commandManager
+        final var playerCommand = this.commandManager.commandBuilder("pay")
+                .permission("crownedbank.player")
+                .argument(PlayerArgument.of("target"))
+                .argument(FloatArgument.of("amount"))
+                .argument(StringArgument.<CommandSender>newBuilder("currency")
+                        .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())).asOptional())
+                .handler(ctx -> {
+                    final Player target = ctx.get("target");
+                    final Player sender = (Player) ctx.getSender();
+                    final float amount = ctx.get("amount");
+                    final String currencyIdentifier = ctx.getOrDefault("currency",Currency.majorCurrency.identifier());
+                    final Currency currency = api.currencyRepository().retrieve(currencyIdentifier);
+                    if(currency==null)
+                    {
+                        sender.sendMessage(Component.text("Invalid currency.")
+                                .color(NamedTextColor.RED));
+                        return;
+                    }
+                    this.api.retrieveAccount(PlayerIdentity.of(sender)).thenAcceptAsync((senderAccount)->{
+                        try {
+                            final Boolean withdrawResult = senderAccount.withdraw(currency,amount).get();
+                            if(withdrawResult==null){
+                                sender.sendMessage(Component.text("Internal error")
+                                        .color(NamedTextColor.RED));
+                                return;
+                            }
+                            if(withdrawResult){
+                                this.api.retrieveAccount(PlayerIdentity.of(target)).thenAcceptAsync((targetAccount)->{
+                                    targetAccount.deposit(currency,amount);
+                                });
+                            }else{
+                                sender.sendMessage(Component.text("Insufficient funds")
+                                        .color(NamedTextColor.RED));
+                            }
+
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    });
+                });
+
+        this.commandManager.command(playerCommand);
+
+
+        final var adminCommand = this.commandManager
                 .commandBuilder("crownedbank", "bank", "cb")
                 .permission("crownedbank.admin");
 
-        // root command
-        {
-            this.commandManager.command(root.handler(ctx -> {
+        // adminCommand command
+        /*{
+            this.commandManager.command(adminCommand.handler(ctx -> {
                 ctx.getSender().sendMessage(
                         Component.text("CrownedBank's Paper implementation version: " + this.getDescription().getVersion())
                                 .color(NamedTextColor.LIGHT_PURPLE)
                 );
             }));
-        }
+        }*/
 
         // cache command
         {
-            final var cacheRoot = root.literal("cache");
+            final var cacheRoot = adminCommand.literal("cache");
             this.commandManager.command(cacheRoot.literal("invalidate")
                     .handler(ctx -> {
                         this.api.accountCache().invalidate();
@@ -153,7 +202,7 @@ public class PaperBankPlugin
 
         // reload command
         {
-            this.commandManager.command(root.literal("reload")
+            this.commandManager.command(adminCommand.literal("reload")
                     .handler(ctx -> {
                         this.configuration();
                         ctx.getSender().sendMessage(Component.text("Configuration reloaded.").color(NamedTextColor.GREEN));
@@ -161,7 +210,7 @@ public class PaperBankPlugin
         }
 
         // withdraw command
-        this.commandManager.command(root.literal("withdraw")
+        this.commandManager.command(adminCommand.literal("withdraw")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
                         .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
@@ -181,7 +230,7 @@ public class PaperBankPlugin
 
                     api.retrieveAccount(PlayerIdentity.of(target)).thenAccept((account -> {
                         account.withdraw(currency, currencyAmount).thenAccept((result) -> {
-                            if(result == null) {
+                            if (result == null) {
                                 sender.sendMessage(Component.text("Internal exception.").color(NamedTextColor.RED));
                                 return;
                             }
@@ -196,7 +245,7 @@ public class PaperBankPlugin
 
 
         // deposit command
-        this.commandManager.command(root.literal("deposit")
+        this.commandManager.command(adminCommand.literal("deposit")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
                         .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList())))
@@ -216,7 +265,7 @@ public class PaperBankPlugin
 
                     api.retrieveAccount(PlayerIdentity.of(target)).thenAccept((account -> {
                         account.deposit(currency, currencyAmount).thenAccept((result) -> {
-                            if(result == null) {
+                            if (result == null) {
                                 sender.sendMessage(Component.text("Internal exception.").color(NamedTextColor.RED));
                                 return;
                             }
@@ -230,7 +279,7 @@ public class PaperBankPlugin
                 }));
 
         // status command
-        this.commandManager.command(root.literal("status")
+        this.commandManager.command(adminCommand.literal("status")
                 .argument(PlayerArgument.of("target"))
                 .argument(StringArgument.<CommandSender>newBuilder("currency")
                         .withSuggestionsProvider((ctx, label) -> api.currencyRepository().all().stream().map(Currency::identifier).collect(Collectors.toList()))

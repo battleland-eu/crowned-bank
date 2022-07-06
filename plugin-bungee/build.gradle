@@ -7,12 +7,15 @@ plugins {
     id "maven-publish"
 }
 
+java {
+    toolchain.languageVersion.set(JavaLanguageVersion.of(17))
+}
 group 'eu.battleland.crownedbank'
 version '1.0-dev'
 
 repositories {
     mavenCentral()
-    maven{
+    maven {
         url = "https://oss.sonatype.org/content/repositories/snapshots"
     }
 }
