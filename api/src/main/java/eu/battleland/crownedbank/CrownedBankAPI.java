@@ -163,6 +163,11 @@ public interface CrownedBankAPI {
         }
 
         @Override
+        public void terminate() {
+
+        }
+
+        @Override
         public Account account(@NonNull Account.Identity identity) {
             return Account.builder()
                     .identity(identity)
