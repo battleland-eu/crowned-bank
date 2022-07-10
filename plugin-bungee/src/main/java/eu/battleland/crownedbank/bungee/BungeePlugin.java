@@ -1,8 +1,7 @@
 package eu.battleland.crownedbank.bungee;
 
-import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.bungee.endpoint.ProxyEndpoint;
-import eu.battleland.crownedbank.config.ConfigProvider;
+import eu.battleland.crownedbank.config.ConfigBuilder;
 import lombok.Getter;
 
 import java.io.File;
@@ -34,8 +33,8 @@ public class BungeePlugin
      * Config Instance.
      */
     @Getter
-    private final ConfigProvider configuration
-            = new ConfigProvider(api, new File(this.getDataFolder(), "config.json")) {
+    private final ConfigBuilder configuration
+            = new ConfigBuilder(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
             return BungeePlugin.this.getResourceAsStream("resources/config.json");

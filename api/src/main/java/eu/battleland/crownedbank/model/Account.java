@@ -103,15 +103,8 @@ public class Account {
     public CompletableFuture<@Nullable Boolean> deposit(final Currency currency,
                                                         float amount) {
         return CompletableFuture.supplyAsync(() -> {
-            final var result = this.transaction(this.depositHandler, currency, amount, () -> {
-                CrownedBank.getLogger().info(String.format(
-                        "Successfully deposited '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
-                ));
-            }, () -> {
-                CrownedBank.getLogger().info(String.format(
-                        "Failed to deposit '%.2f' %s to account '%s'.", amount, currency.identifier(), identity
-                ));
-            });
+            final var result = this.transaction(this.depositHandler,
+                    currency, amount, null, null);
 
             LogBook.logDeposit(this, currency, amount, LogBook.RecordResult.byBoolean(result));
 
@@ -260,10 +253,13 @@ public class Account {
      */
     private synchronized Boolean transaction(final TransactionHandler handler,
                                              final Currency currency,
-                                             final float amount,
+                                             float amount,
                                              Runnable onSuccess,
                                              Runnable onFailure) {
 
+        // round if decimal points are now allowed
+        if(!currency.isAllowDecimal())
+            amount = Math.round(amount);
 
         boolean result;
         try {

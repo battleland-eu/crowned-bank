@@ -57,13 +57,13 @@ public class ProxyEndpoint
         final var response
                 = ByteStreams.newDataOutput();
 
+        // read sub-channel
+        final var sub = request.readUTF();
+        if (!ProxyConstants.SUB_CHANNEL.equals(sub))
+            return;
+
         try {
             CompletableFuture.runAsync(() -> {
-                // read sub-channel
-                final var sub = request.readUTF();
-                if (!ProxyConstants.SUB_CHANNEL.equals(sub))
-                    return;
-
                 // read operation
                 final var op = ProxyOperation
                         .values()[request.readByte()];
@@ -195,11 +195,10 @@ public class ProxyEndpoint
                 requestee.sendData(ProxyConstants.CHANNEL, response.toByteArray());
             });
 
+            event.setCancelled(true);
         } catch (Exception x) {
             this.plugin.getLogger().severe("Malformed proxy request");
             x.printStackTrace();
-        } finally {
-            event.setCancelled(true);
         }
     }
 }

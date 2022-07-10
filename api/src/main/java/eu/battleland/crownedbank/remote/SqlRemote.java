@@ -31,7 +31,8 @@ public class SqlRemote
 
     private String tableCommand = """
             create table if not exists `%s_data`
-              ( `identity_name` TEXT NOT NULL , `identity_uuid` TEXT NOT NULL , `json_data` TEXT NOT NULL , UNIQUE (`identity_name`), UNIQUE (`identity_uuid`));
+              ( `identity_name` VARCHAR(32) NOT NULL , `identity_uuid` VARCHAR(36) NOT NULL , `json_data` LONGTEXT
+               NOT NULL , UNIQUE (`identity_name`), UNIQUE (`identity_uuid`));
             """;
     private String storeCommand = """
             insert into `%s_data` (`identity_name`,`identity_uuid`,`json_data`) values('%s','%s','%s')

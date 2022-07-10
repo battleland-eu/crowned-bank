@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank.paper.bridge;
 
 import eu.battleland.crownedbank.CrownedBank;
+import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
 import lombok.extern.log4j.Log4j2;
 import org.bukkit.OfflinePlayer;
@@ -37,12 +38,22 @@ public class PlaceholderExpansion
         final var args = params.split("_");
 
         try {
-            // account status
             if(args[0].equalsIgnoreCase("status")) {
-                final var currencyIdentifier = args[1];
-                final var currency = CrownedBank.getApi()
-                        .currencyRepository()
-                        .retrieve(currencyIdentifier);
+
+                final Currency currency;
+                if(args.length > 1) {
+                    final var currencyIdentifier = args[1];
+                    currency = CrownedBank.getApi()
+                            .currencyRepository()
+                            .retrieve(currencyIdentifier);
+                } else
+                    currency = Currency.majorCurrency;
+
+                final boolean formatted = args.length <= 2 ||
+                        (!args[2].equalsIgnoreCase("raw")
+                                && !args[2].equalsIgnoreCase("pure")
+                                && !args[2].equalsIgnoreCase("value"));
+
                 if(currency == null)
                     return null;
 
@@ -50,7 +61,10 @@ public class PlaceholderExpansion
                     final var account = CrownedBank.getApi()
                             .retrieveAccount(PlayerIdentity.of(player))
                             .get(1, TimeUnit.SECONDS);
-                    return String.format("%.2f", account.status(currency));
+                    final var status = account.status(currency);
+                    if(formatted)
+                        return Currency.prettyCurrencyAmountString(currency, status);
+                    return String.format(currency.getFormat(), status);
                 } catch (Exception e) {
                     return "n/a";
                 }

@@ -1,7 +1,7 @@
 package eu.battleland.crownedbank.bungee.config;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.config.ConfigProvider;
+import eu.battleland.crownedbank.config.ConfigBuilder;
 import lombok.NonNull;
 import net.md_5.bungee.config.Configuration;
 import net.md_5.bungee.config.YamlConfiguration;
@@ -9,12 +9,12 @@ import net.md_5.bungee.config.YamlConfiguration;
 import java.io.File;
 import java.io.InputStream;
 
-public class BungeeConfigProvider
-        extends ConfigProvider {
+public class BungeeConfigBuilder
+        extends ConfigBuilder {
 
     private Configuration configuration;
 
-    public BungeeConfigProvider(@NonNull CrownedBankAPI api, @NonNull File configFile) {
+    public BungeeConfigBuilder(@NonNull CrownedBankAPI api, @NonNull File configFile) {
         super(api, configFile);
     }
 

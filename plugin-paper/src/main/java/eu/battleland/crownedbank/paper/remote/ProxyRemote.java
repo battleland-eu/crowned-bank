@@ -14,6 +14,7 @@ import eu.battleland.crownedbank.remote.Remote;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.extern.log4j.Log4j2;
+import net.minecraft.network.protocol.game.ClientGamePacketListener;
 import org.bukkit.Bukkit;
 import org.bukkit.event.Listener;
 import org.jetbrains.annotations.Nullable;
@@ -93,7 +94,7 @@ public class ProxyRemote
                     fetchWealthyFuture.complete(accounts);
                     fetchWealthyFuture = null;
 
-                    log.info("Fetched wealthy accounts");
+                    log.debug("Fetched wealthy accounts");
                 } else {
 
                     // read account identity
@@ -121,7 +122,7 @@ public class ProxyRemote
                                         = Account.Data.decode(json, Predicate.isEqual(this));
 
                                 future.complete(account);
-                                log.info("Fetched account for '{}'", identity);
+                                log.debug("Fetched account for '{}'", identity);
                             }
                         }
                         case WITHDRAW_RESPONSE -> {
@@ -137,7 +138,7 @@ public class ProxyRemote
                                 return;
                             }
                             withdrawFuture.complete(data);
-                            log.info("Withdraw from account '{}' completed.", identity);
+                            log.debug("Withdraw from account '{}' completed.", identity);
                         }
                         case DEPOSIT_RESPONSE -> {
                             final var depositFuture = this.depositFutures.remove(identity);
@@ -152,7 +153,7 @@ public class ProxyRemote
                                 return;
                             }
                             depositFuture.complete(data);
-                            log.info("Deposit to account '{}' completed.", identity);
+                            log.debug("Deposit to account '{}' completed.", identity);
                         }
                     }
                 }

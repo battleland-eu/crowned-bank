@@ -6,8 +6,8 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NonNull;
 import net.kyori.adventure.text.Component;
+import net.kyori.adventure.text.TextComponent;
 
-import java.awt.event.ComponentEvent;
 import java.util.Objects;
 
 /**
@@ -29,9 +29,17 @@ public class Currency
     private String identifier;
 
     @Getter
-    private Component namePlural;
+    @Builder.Default
+    private Component namePlural
+            = Component.empty();
+
     @Getter
-    private Component nameSingular;
+    @Builder.Default
+    private Component nameSingular
+            = Component.empty();
+
+    @Getter
+    private boolean allowDecimal;
 
     @Getter
     private String format;
@@ -44,13 +52,13 @@ public class Currency
         return this.identifier;
     }
 
+    /**
+     * @return Storage.
+     */
     public @NonNull Currency.Storage newStorage() {
         return new Storage(this);
     }
 
-    public @NonNull Component name(float amount) {
-        return amount == 0 ? namePlural: amount == 1 ? nameSingular : namePlural;
-    }
 
     /**
      * Compare this instance with instance {@code o} or compare identifiers.
@@ -71,6 +79,31 @@ public class Currency
     @Override
     public int hashCode() {
         return identifier != null ? identifier.hashCode() : 0;
+    }
+
+    /**
+     * @param currency Currency.
+     * @param amount Amount of currency.
+     * @return Formatted value and currency name as Component.
+     */
+    public static @NonNull Component prettyCurrencyAmountComponent(final Currency currency, float amount) {
+        return Component.text(String.format(currency.format + " ", amount))
+                .append(amount == 1 ? currency.nameSingular : currency.namePlural);
+    }
+
+    /**
+     * @param currency Currency.
+     * @param amount Amount of currency.
+     * @return Formatted value and currency name as String.
+     */
+    public static @NonNull String prettyCurrencyAmountString(final Currency currency, float amount) {
+
+        // account's transaction handler rounds if decimal is not allowed
+        // reflect that in pretty string
+        if(!currency.allowDecimal)
+            amount = Math.round(amount);
+
+        return String.format(currency.format + " %s", amount, amount == 1 ? ((TextComponent)currency.nameSingular).content() : ((TextComponent)currency.namePlural).content() );
     }
 
     /**

@@ -1,0 +1,10 @@
+remotes:
+  bungeecord:
+    type: proxy
+    parameters: {}
+  database:
+    type: sql
+    parameters:
+      username: "root"
+currencies:
+  coins:

@@ -20,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 import java.util.logging.Logger;
 
 /**
@@ -202,12 +203,17 @@ public interface CrownedBankAPI {
                         final var account = account(identity);
                         currenciesByRemotes().forEach((remote, currencies) -> {
                             try {
-                                final var data = remote.fetchAccount(identity).get();
+                                final var data = remote.fetchAccount(identity)
+                                        .get(CrownedBank.getConfig().remoteTimeoutMillis(), TimeUnit.MILLISECONDS);
                                 if (data != null)
                                     account.getData().join(data);
 
                             } catch (Exception e) {
-                                throw new RuntimeException(e);
+                                CrownedBank.getLogger()
+                                        .severe(String.format("Couldn't retrieve account data for currencies '%s' from remote '%s'.",
+                                                currencies,
+                                                remote.identifier()));
+                                e.printStackTrace();
                             }
                         });
 

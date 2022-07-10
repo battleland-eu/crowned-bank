@@ -2,7 +2,6 @@ package eu.battleland.crownedbank.config;
 
 import com.google.gson.JsonParser;
 import eu.battleland.crownedbank.CrownedBankAPI;
-import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
@@ -14,15 +13,15 @@ import java.io.*;
 /**
  * Global Configuration
  */
-public abstract class ConfigProvider
+public abstract class ConfigBuilder
         implements Controllable {
 
     private final CrownedBankAPI api;
     private final File configFile;
 
 
-    public ConfigProvider(@NonNull CrownedBankAPI api,
-                          @NonNull File configFile) {
+    public ConfigBuilder(@NonNull CrownedBankAPI api,
+                         @NonNull File configFile) {
         this.api = api;
         this.configFile = configFile;
     }
@@ -97,16 +96,19 @@ public abstract class ConfigProvider
                     if(remote == null)
                         throw new IllegalStateException("No such remote identified by " + remoteIdentifier);
 
-                    final var currency = Currency.builder()
+                    final var currencyBuilder = Currency.builder()
                             .identifier(currencyJson.getAsJsonPrimitive("id").getAsString())
-                            .namePlural(componentDeserializer.deserializeFromTree(currencyJson.get("namePlural")))
-                            .nameSingular(componentDeserializer.deserializeFromTree(currencyJson.get("nameSingular")))
                             .format(currencyJson.getAsJsonPrimitive("format").getAsString())
-                            .remote(remote)
-                            .build();
+                            .allowDecimal(currencyJson.getAsJsonPrimitive("allow_decimal").getAsBoolean())
+                            .remote(remote);
+
+                    if(currencyJson.has("namePlural"))
+                        currencyBuilder.namePlural(componentDeserializer.deserializeFromTree(currencyJson.get("namePlural")));
+                    if(currencyJson.has("nameSingular"))
+                        currencyBuilder.nameSingular(componentDeserializer.deserializeFromTree(currencyJson.get("nameSingular")));
 
                     api.currencyRepository()
-                            .register(currency);
+                            .register(currencyBuilder.build());
                 });
 
                 // configure defaults
@@ -114,7 +116,7 @@ public abstract class ConfigProvider
                         .retrieve(root.getAsJsonPrimitive("major_currency")
                                 .getAsString());
                 final var minorCurrency = api.currencyRepository()
-                        .retrieve(root.getAsJsonPrimitive("major_currency")
+                        .retrieve(root.getAsJsonPrimitive("minor_currency")
                                 .getAsString());
 
 
