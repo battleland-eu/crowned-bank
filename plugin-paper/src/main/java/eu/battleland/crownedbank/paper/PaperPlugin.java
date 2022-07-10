@@ -373,16 +373,17 @@ public class PaperPlugin
                                 senderAccount.pay(targetAccount, currency, amount).thenAcceptAsync((result) -> {
                                     if (result) {
                                         sender.sendMessage(Component.translatable("pay.success.sent",
-                                                target.name(), Component.text(amount), currency.name(amount))
+                                                target.name(), Component.text(String.format(currency.getFormat(), amount)), currency.name(amount)).color(NamedTextColor.GRAY)
                                         );
                                         target.sendMessage(Component.translatable("pay.success.received",
-                                                sender.name(), Component.text(amount), currency.name(amount)));
+                                                sender.name(), Component.text(String.format(currency.getFormat(), amount)), currency.name(amount)).color(NamedTextColor.GRAY)
+                                        );
 
                                         log.info("Payment from '{}' to '{}' completed successfully",
                                                 senderAccount.getIdentity(), targetAccount.getIdentity());
                                     } else {
                                         sender.sendMessage(Component.translatable("pay.failure",
-                                                target.name(), Component.text(amount), currency.name(amount))
+                                                target.name(), Component.text(String.format(currency.getFormat(), amount)), currency.name(amount)).color(NamedTextColor.RED)
                                         );
 
                                         log.info("Payment from '{}' to '{}' failed",
