@@ -24,8 +24,11 @@ import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
 import org.bukkit.plugin.ServicePriority;
 import org.bukkit.plugin.java.JavaPlugin;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
 import java.io.InputStream;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -117,6 +120,47 @@ public class PaperPlugin
     }
 
     /**
+     * Exports embedded resource located to filesystem.
+     *
+     * @param embeddedResourcePath Embedded resource path.
+     * @param externalResourcePath External resource path.
+     * @param replace              Whether to replace existing external file
+     */
+    public void exportResource(@NotNull String embeddedResourcePath,
+                               @NotNull String externalResourcePath,
+                               boolean replace) {
+        final var exportFile = new File(getDataFolder(), externalResourcePath);
+
+        try {
+            if (!exportFile.getParentFile().exists())
+                exportFile.getParentFile().mkdirs();
+            if (!exportFile.exists())
+                exportFile.createNewFile();
+        } catch (Exception x) {
+            log.error(x);
+        }
+
+        try (final var input = this.getResource(embeddedResourcePath);
+             final var output = new FileOutputStream(exportFile)) {
+            if (input == null)
+                return;
+
+            byte[] buffer = new byte[2048];
+            int read;
+
+            while (true){
+                read = input.read(buffer);
+                if(read == -1)
+                    break;
+                output.write(buffer, 0, read);
+            }
+
+        } catch (Exception x) {
+            log.error(x);
+        }
+    }
+
+    /**
      * Register placeholders.
      */
     private void expansions() {
@@ -128,7 +172,7 @@ public class PaperPlugin
         }
 
         // VaultAPI
-        if (Bukkit.getPluginManager().getPlugin("Vault") == null) {
+        if (Bukkit.getPluginManager().getPlugin("Vault") != null) {
             getServer().getServicesManager()
                     .register(Economy.class, new VaultExpansion(), this, ServicePriority.Normal);
             log.info("Registered Vault Expansion");
@@ -315,8 +359,7 @@ public class PaperPlugin
                                 .retrieve(currencyIdentifier);
 
                         if (currency == null) {
-                            sender.sendMessage(Component.text("Invalid currency.")
-                                    .color(NamedTextColor.RED));
+                            sender.sendMessage(Component.translatable("pay.failure.currency"));
                             return;
                         }
 
@@ -329,10 +372,10 @@ public class PaperPlugin
 
                                 senderAccount.pay(targetAccount, currency, amount).thenAcceptAsync((result) -> {
                                     if (result) {
-                                        sender.sendMessage(Component.translatable("pay.sent.success",
+                                        sender.sendMessage(Component.translatable("pay.success.sent",
                                                 target.name(), Component.text(amount), currency.name(amount))
                                         );
-                                        target.sendMessage(Component.translatable("pay.received.success",
+                                        target.sendMessage(Component.translatable("pay.success.received",
                                                 sender.name(), Component.text(amount), currency.name(amount)));
 
                                         log.info("Payment from '{}' to '{}' completed successfully",

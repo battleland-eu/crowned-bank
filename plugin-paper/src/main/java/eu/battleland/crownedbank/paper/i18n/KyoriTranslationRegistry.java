@@ -2,15 +2,11 @@ package eu.battleland.crownedbank.paper.i18n;
 
 import eu.battleland.crownedbank.i18n.TranslationRegistry;
 import eu.battleland.crownedbank.paper.PaperCrownedBank;
-import io.papermc.paper.adventure.PaperAdventure;
 import lombok.Getter;
 import lombok.extern.log4j.Log4j2;
 import net.kyori.adventure.key.Key;
 import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.ComponentLike;
-import net.kyori.adventure.text.minimessage.MiniMessage;
 import net.kyori.adventure.translation.GlobalTranslator;
-import net.kyori.adventure.translation.Translatable;
 import org.bukkit.configuration.file.YamlConfiguration;
 import org.jetbrains.annotations.NotNull;
 
@@ -38,11 +34,15 @@ public class KyoriTranslationRegistry
             final var yaml = new YamlConfiguration();
             yaml.load(reader);
 
-            yaml.getKeys(false).forEach(key -> {
+            yaml.getKeys(true).forEach(key -> {
+                if(yaml.isConfigurationSection(key))
+                    return;
                 final var translationString = yaml.getString(key);
+                if(translationString == null)
+                    return;
 
                 try {
-                    final var translation = new MessageFormat(translationString);
+                    final var translation = new MessageFormat(translationString.replaceAll("'", "''"));
                     kyoriTranslationRegistry.register(key, locale, translation);
                 } catch (IllegalArgumentException x) {
                     log.error("Invalid translation string '{}', are the arguments wrong?", translationString);
@@ -60,9 +60,9 @@ public class KyoriTranslationRegistry
         final var result = new HashMap<Locale, InputStream>();
         {
             final var languageFolder
-                    = new File(PaperCrownedBank.pluginInstance().getDataFolder(), "languages");
+                    = new File(PaperCrownedBank.pluginInstance().getDataFolder(), "translations");
             final var languageFiles = languageFolder.listFiles();
-            if(!languageFolder.isDirectory() || !languageFolder.exists() || languageFiles == null) {
+            if (!languageFolder.isDirectory() || !languageFolder.exists() || languageFiles == null) {
                 log.error("Language folder is not a directory, is empty, or does not exist.");
                 return result;
             }
@@ -72,7 +72,7 @@ public class KyoriTranslationRegistry
                 final var localeTag = name.substring(0, name.lastIndexOf('.'));
                 final var locale = Locale.forLanguageTag(localeTag);
 
-                if(locale == null) {
+                if (locale == null) {
                     log.error("No such locale identified by '{}' from file '{}'", localeTag, languageFile.getPath());
                     continue;
                 }
@@ -89,6 +89,13 @@ public class KyoriTranslationRegistry
 
     @Override
     public void initialize() {
+
+        {
+            PaperCrownedBank.pluginInstance()
+                    .exportResource("resources/translations/en-US.yaml",
+                            "translations/en-US.yaml", false);
+        }
+
         super.initialize();
 
         // Add our translation registry to global translator

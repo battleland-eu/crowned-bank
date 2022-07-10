@@ -6,7 +6,8 @@ import eu.battleland.crownedbank.remote.SqlRemote;
 import lombok.Getter;
 import lombok.experimental.Accessors;
 import net.md_5.bungee.api.plugin.Listener;
-import net.md_5.bungee.api.plugin.Plugin;
+
+import java.util.logging.Logger;
 
 @Accessors(fluent = true)
 public class BungeeCrownedBank
@@ -14,12 +15,12 @@ public class BungeeCrownedBank
         implements Listener {
 
     @Getter
-    private static Plugin pluginInstance;
+    private static BungeePlugin pluginInstance;
 
     @Getter
     private final TranslationRegistry<String> translationRegistry = null;
 
-    public BungeeCrownedBank(Plugin plugin) {
+    public BungeeCrownedBank(BungeePlugin plugin) {
         pluginInstance = plugin;
 
         // register remote factories
@@ -27,12 +28,16 @@ public class BungeeCrownedBank
             this.remoteFactoryRepository()
                     .register(SqlRemote.factory());
         }
-
     }
 
     @Override
-    public void initialize() throws Exception {
+    protected Logger provideLogger() {
+        return pluginInstance.getLogger();
+    }
 
+    @Override
+    public void initialize() {
+        super.initialize();
     }
 
     @Override

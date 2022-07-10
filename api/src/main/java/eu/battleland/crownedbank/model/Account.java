@@ -36,27 +36,28 @@ public class Account {
 
     /**
      * Withdraw currency from sender(calling object) and deposits it to receiver.
+     *
      * @param receiver Receiver.
      * @param currency Currency.
      * @param amount   Amount of currency.
      * @return Boolean true if successful.
      */
     public CompletableFuture<Boolean> pay(final Account receiver,
-                                                    final Currency currency,
-                                                    final float amount) {
-        CompletableFuture.supplyAsync(() -> {
+                                          final Currency currency,
+                                          final float amount) {
+        return CompletableFuture.supplyAsync(() -> {
             final var withdrawResult = LogBook.RecordResult.byBoolean(
                     this.transaction(withdrawHandler, currency, amount, null, null)
             );
 
             boolean result = false;
             var depositResult = LogBook.RecordResult.NOT_EXECUTED;
-            if(withdrawResult.equals(LogBook.RecordResult.SUCCESS)) {
+            if (withdrawResult.equals(LogBook.RecordResult.SUCCESS)) {
                 depositResult = LogBook.RecordResult.byBoolean(
                         receiver.transaction(receiver.depositHandler, currency, amount, null, null)
                 );
 
-                if(depositResult.equals(LogBook.RecordResult.SUCCESS))
+                if (depositResult.equals(LogBook.RecordResult.SUCCESS))
                     result = true;
             }
 
@@ -86,6 +87,7 @@ public class Account {
             });
 
             LogBook.logWithdraw(this, currency, amount, LogBook.RecordResult.byBoolean(result));
+
             return result;
         });
     }
@@ -99,7 +101,7 @@ public class Account {
      */
 
     public CompletableFuture<@Nullable Boolean> deposit(final Currency currency,
-                                              float amount) {
+                                                        float amount) {
         return CompletableFuture.supplyAsync(() -> {
             final var result = this.transaction(this.depositHandler, currency, amount, () -> {
                 CrownedBank.getLogger().info(String.format(
@@ -112,6 +114,7 @@ public class Account {
             });
 
             LogBook.logDeposit(this, currency, amount, LogBook.RecordResult.byBoolean(result));
+
             return result;
         });
     }
@@ -265,7 +268,7 @@ public class Account {
         boolean result;
         try {
             // call transaction handler
-             result = handler.handle(this.data.currencies.computeIfAbsent(currency, (t) -> currency.newStorage()), amount, this);
+            result = handler.handle(this.data.currencies.computeIfAbsent(currency, (t) -> currency.newStorage()), amount, this);
         } catch (final Exception x) {
             CrownedBank.getLogger().severe("Transaction handler threw exception");
             x.printStackTrace();
@@ -273,22 +276,23 @@ public class Account {
             result = false;
         }
 
-       try {
-           // transaction accepted
-           if (result) {
-               onSuccess.run();
-               return true;
-           } else {
-               // transaction not accepted
-               onFailure.run();
-               return false;
-           }
-       } catch (Exception x) {
-           CrownedBank.getLogger().severe("Transaction callbacks threw exception");
-           x.printStackTrace();
+        try {
+            // transaction accepted
+            if (result && onSuccess != null) {
+                onSuccess.run();
+                return true;
+            } else if (onFailure != null) {
+                // transaction not accepted
+                onFailure.run();
+                return false;
+            } else
+                return result;
 
-            return null;
-       }
+        } catch (Exception x) {
+            CrownedBank.getLogger().severe("Transaction callbacks threw exception");
+            x.printStackTrace();
+            return result;
+        }
     }
 
 }

@@ -64,6 +64,8 @@ public class PaperCrownedBank
 
     }
 
+
+
     @Override
     protected Logger provideLogger() {
         return pluginInstance.getLogger();
