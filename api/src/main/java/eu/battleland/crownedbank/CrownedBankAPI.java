@@ -2,6 +2,7 @@ package eu.battleland.crownedbank;
 
 import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.helper.TransactionHandler;
+import eu.battleland.crownedbank.i18n.TranslationRegistry;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.remote.Remote;
@@ -12,11 +13,14 @@ import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NonNull;
 import lombok.Setter;
+import lombok.experimental.Accessors;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 /**
  * Crowned Bank API
@@ -47,32 +51,69 @@ public interface CrownedBankAPI {
      */
     CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency);
 
+    /**
+     * @return Account cache.
+     */
+    AccountCache accountCache();
 
     /**
      * @return Remote repository.
      */
-    RemoteRepository getRemoteRepository();
+    RemoteRepository remoteRepository();
 
     /**
      * @return Currency repository.
      */
-    CurrencyRepository getCurrencyRepository();
+    CurrencyRepository currencyRepository();
 
     /**
      * @return Remote factory repository.
      */
-    RemoteFactoryRepository getRemoteFactoryRepository();
+    RemoteFactoryRepository remoteFactoryRepository();
 
 
     /**
-     * @return Map of grouped currencies by their respective remotes.
+     * @return Translation registry.
      */
-    Map<Remote, List<Currency>> currenciesByRemotes();
+    TranslationRegistry<?> translationRegistry();
 
+
+    class AccountCache {
+
+        @Getter(AccessLevel.PROTECTED)
+        @Setter(AccessLevel.PROTECTED)
+        private Map<Account.Identity, Account> cachedAccounts
+                = new ConcurrentHashMap<>();
+
+        /**
+         * Cache account.
+         *
+         * @param account Account
+         */
+        public void put(@NotNull Account account) {
+            this.cachedAccounts.put(account.getIdentity(), account);
+        }
+
+        /**
+         * @param identity Account identity
+         * @return Account
+         */
+        public @Nullable Account get(@NotNull Account.Identity identity) {
+            return this.cachedAccounts.get(identity);
+        }
+
+        /**
+         * Invalidates cache.
+         */
+        public void invalidate() {
+            this.cachedAccounts.clear();
+        }
+    }
 
     /**
      * Implementation base
      */
+    @Accessors(fluent = true)
     abstract class Base
             implements CrownedBankAPI, Controllable {
 
@@ -83,11 +124,6 @@ public interface CrownedBankAPI {
         @Getter
         @Setter(AccessLevel.PROTECTED)
         private Remote remote;
-
-        @Getter(AccessLevel.PROTECTED)
-        @Setter(AccessLevel.PROTECTED)
-        private Map<Account.Identity, Account> cachedAccounts
-                = new ConcurrentHashMap<>();
 
         @Getter(AccessLevel.PROTECTED)
         @Setter(AccessLevel.PROTECTED)
@@ -103,21 +139,28 @@ public interface CrownedBankAPI {
         private volatile CompletableFuture<List<Account>> wealthyAccountsFuture
                 = null;
 
-        @Getter(AccessLevel.PUBLIC)
-        @Setter(AccessLevel.PROTECTED)
-        private long lastWealthCheck = 0;
-
-
         @Getter
-        private final CurrencyRepository currencyRepository
-                = new CurrencyRepository();
+        private final AccountCache accountCache
+                = new AccountCache();
+
         @Getter
         private final RemoteRepository remoteRepository
                 = new RemoteRepository();
         @Getter
+        private final CurrencyRepository currencyRepository
+                = new CurrencyRepository();
+        @Getter
         private final RemoteFactoryRepository remoteFactoryRepository
                 = new RemoteFactoryRepository();
 
+        private long lastWealthCheck = 0;
+
+        protected abstract Logger provideLogger();
+
+        @Override
+        public void initialize() {
+            CrownedBank.setLogger(provideLogger());
+        }
 
         @Override
         public Account account(@NonNull Account.Identity identity) {
@@ -128,33 +171,15 @@ public interface CrownedBankAPI {
                     .build();
         }
 
-
-        @Override
-        public Map<Remote, List<Currency>> currenciesByRemotes() {
-            final var result = new HashMap<Remote, List<Currency>>();
-            this.getCurrencyRepository().all().forEach((currency -> {
-                var remote = currency.getRemote();
-                if (remote == null)
-                    remote = this.remote;
-
-                result.computeIfAbsent(remote, (r) -> {
-                    final var array = new ArrayList<Currency>();
-                    array.add(currency);
-                    return array;
-                } );
-                result.computeIfPresent(remote, (r, array) -> {
-                    array.add(currency);
-                    return array;
-                });
-            }));
-            return result;
-        }
-
         @Override
         public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity) {
-            // Return cached account
-            if (this.cachedAccounts.containsKey(identity))
-                return CompletableFuture.completedFuture(this.cachedAccounts.get(identity));
+
+            // Check if account is cached
+            {
+                final var cachedAccount = this.accountCache.get(identity);
+                if (cachedAccount != null)
+                    return CompletableFuture.completedFuture(this.accountCache.get(identity));
+            }
 
             synchronized (this) {
                 // Check if account is already being retrieved,
@@ -167,13 +192,13 @@ public interface CrownedBankAPI {
                 }
 
                 {
-                    // Fetch the account from remotes
+                    // Fetch the account from remote
                     final var future = CompletableFuture.supplyAsync(() -> {
                         final var account = account(identity);
                         currenciesByRemotes().forEach((remote, currencies) -> {
                             try {
                                 final var data = remote.fetchAccount(identity).get();
-                                if(data != null)
+                                if (data != null)
                                     account.getData().join(data);
 
                             } catch (Exception e) {
@@ -181,6 +206,8 @@ public interface CrownedBankAPI {
                             }
                         });
 
+                        this.accountCache.put(account);
+                        this.accountFutures.remove(identity);
                         return account;
                     });
                     // Store the account retrieval future
@@ -192,7 +219,7 @@ public interface CrownedBankAPI {
 
         @Override
         public CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency) {
-            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBank.getWealthyCheckMillis()
+            final boolean triggerCheck = (System.currentTimeMillis() - this.lastWealthCheck) > CrownedBank.getConfig().wealthCheckEveryMillis()
                     || !this.wealthyAccounts.containsKey(currency); // trigger check if outdated or not present
             if (!triggerCheck)
                 return CompletableFuture.completedFuture(this.wealthyAccounts.get(currency));
@@ -218,6 +245,26 @@ public interface CrownedBankAPI {
                 this.wealthyAccountsFuture = future;
                 return future;
             }
+        }
+
+        public Map<Remote, List<Currency>> currenciesByRemotes() {
+            final var result = new HashMap<Remote, List<Currency>>();
+            this.currencyRepository().all().forEach((currency -> {
+                var remote = currency.getRemote();
+                if (remote == null)
+                    remote = this.remote;
+
+                result.computeIfAbsent(remote, (r) -> {
+                    final var array = new ArrayList<Currency>();
+                    array.add(currency);
+                    return array;
+                });
+                result.computeIfPresent(remote, (r, array) -> {
+                    array.add(currency);
+                    return array;
+                });
+            }));
+            return result;
         }
     }
 

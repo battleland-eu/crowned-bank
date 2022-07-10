@@ -2,20 +2,20 @@ package eu.battleland.crownedbank.bungee;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.bungee.endpoint.ProxyEndpoint;
-import eu.battleland.crownedbank.config.GlobalConfig;
+import eu.battleland.crownedbank.config.ConfigProvider;
 import lombok.Getter;
 
 import java.io.File;
 import java.io.InputStream;
 
-public class BankPlugin
+public class BungeePlugin
         extends net.md_5.bungee.api.plugin.Plugin {
 
     /**
      * Plugin Instance.
      */
     @Getter
-    private static BankPlugin instance;
+    private static BungeePlugin instance;
     {
         instance = this;
     }
@@ -27,18 +27,18 @@ public class BankPlugin
      * API Instance.
      */
     @Getter
-    private final CrownedBankAPI api
+    private final BungeeCrownedBank api
             = new BungeeCrownedBank(this);
 
     /**
      * Config Instance.
      */
     @Getter
-    private final GlobalConfig configuration
-            = new GlobalConfig(api, new File(this.getDataFolder(), "config.json")) {
+    private final ConfigProvider configuration
+            = new ConfigProvider(api, new File(this.getDataFolder(), "config.json")) {
         @Override
         public InputStream provide() {
-            return BankPlugin.this.getResourceAsStream("resources/config.json");
+            return BungeePlugin.this.getResourceAsStream("resources/config.json");
         }
     };
 
@@ -50,6 +50,10 @@ public class BankPlugin
 
     @Override
     public void onEnable() {
+
+        // initialize api
+        this.api.initialize();
+
         // initialize configuration
         try {
             configuration.initialize();

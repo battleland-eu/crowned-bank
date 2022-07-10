@@ -14,12 +14,57 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
+/**
+ *
+ */
 public class CrownedBank {
 
+    /**
+     * Logger used by the API.
+     */
+    @Getter
+    @Setter(AccessLevel.PROTECTED)
+    private static Logger logger;
+
+    /**
+     * API Instance.
+     */
     @Getter
     @Setter(AccessLevel.PROTECTED)
     private static CrownedBankAPI api;
+
+    @Getter
+    @Setter(AccessLevel.PROTECTED)
+    private static Config config = new Config(
+            5000,
+            1,
+            Integer.MAX_VALUE,
+            2,
+            20,
+            5 * 60 * 1000
+    );
+
+
+    /**
+     * CrownedBank Configuration
+     */
+    public record Config(int remoteTimeoutMillis,
+
+                         int transactionMinValue,
+                         int transactionMaxValue,
+                         int valueFractionalDigits,
+
+                         int wealthCheckAccountLimit,
+                         long wealthCheckEveryMillis) {
+    }
+
+
+    @Getter
+    @Setter
+    private static boolean identityNameMajor = false;
+
 
     public static final Gson GSON = new GsonBuilder()
             .registerTypeAdapterFactory(new RecordTypeAdapterFactory())
@@ -34,7 +79,7 @@ public class CrownedBank {
                 final var map = new HashMap<Currency, Float>();
                 final var object = json.getAsJsonObject();
                 object.entrySet().forEach((entry) -> {
-                    final Currency currency = getApi().getCurrencyRepository().retrieve(entry.getKey());
+                    final Currency currency = getApi().currencyRepository().retrieve(entry.getKey());
                     if (currency == null)
                         throw new IllegalStateException("Unregistered currency: " + entry.getKey());
 
@@ -43,18 +88,6 @@ public class CrownedBank {
                 return map;
             })
             .create();
-
-    @Getter
-    @Setter
-    private static boolean identityNameMajor = false;
-
-    @Getter
-    @Setter
-    private static int wealthyCheckAccountLimit = 25;
-    @Getter
-    @Setter
-    private static long wealthyCheckMillis = 5 * 60 * 1000;
-
 
     // https://github.com/google/gson/issues/1794
     public static class RecordTypeAdapterFactory implements TypeAdapterFactory {

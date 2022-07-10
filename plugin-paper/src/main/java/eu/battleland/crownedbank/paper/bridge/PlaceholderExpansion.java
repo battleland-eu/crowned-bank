@@ -41,7 +41,7 @@ public class PlaceholderExpansion
             if(args[0].equalsIgnoreCase("status")) {
                 final var currencyIdentifier = args[1];
                 final var currency = CrownedBank.getApi()
-                        .getCurrencyRepository()
+                        .currencyRepository()
                         .retrieve(currencyIdentifier);
                 if(currency == null)
                     return null;

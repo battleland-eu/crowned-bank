@@ -3,7 +3,7 @@ package eu.battleland.crownedbank.bungee.endpoint;
 import com.google.common.io.ByteStreams;
 import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.abstracted.Controllable;
-import eu.battleland.crownedbank.bungee.BankPlugin;
+import eu.battleland.crownedbank.bungee.BungeePlugin;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.proxy.ProxyConstants;
@@ -19,14 +19,14 @@ import java.util.concurrent.CompletableFuture;
 public class ProxyEndpoint
         implements Listener, Controllable {
 
-    private final BankPlugin plugin;
+    private final BungeePlugin plugin;
 
     /**
      * Constructor.
      *
      * @param plugin Plugin Instance.
      */
-    public ProxyEndpoint(@NonNull BankPlugin plugin) {
+    public ProxyEndpoint(@NonNull BungeePlugin plugin) {
         this.plugin = plugin;
     }
 
@@ -83,7 +83,7 @@ public class ProxyEndpoint
                     try {
                         final Currency currency = plugin
                                 .getApi()
-                                .getCurrencyRepository()
+                                .currencyRepository()
                                 .retrieve(request.readUTF());
 
                         final var accounts = plugin.getApi()
@@ -143,7 +143,7 @@ public class ProxyEndpoint
                             try {
                                 final Currency currency = plugin
                                         .getApi()
-                                        .getCurrencyRepository()
+                                        .currencyRepository()
                                         .retrieve(request.readUTF());
                                 if (currency == null)
                                     throw new Exception("Unknown currency");
@@ -171,7 +171,7 @@ public class ProxyEndpoint
                             try {
                                 final Currency currency = plugin
                                         .getApi()
-                                        .getCurrencyRepository()
+                                        .currencyRepository()
                                         .retrieve(request.readUTF());
                                 if (currency == null)
                                     throw new Exception("Unknown currency");

@@ -14,6 +14,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
+import java.util.logging.LogManager;
+import java.util.logging.Logger;
 
 public class SqlRemote
         implements Remote {
@@ -82,15 +84,24 @@ public class SqlRemote
             config.setMaximumPoolSize(data.getAsJsonPrimitive("pool_size")
                     .getAsInt());
         }
-        this.dataSource = new HikariDataSource(this.config);
 
-        if(data.has("tablePrefix"))
-            this.tablePrefix = data.getAsJsonPrimitive("tablePrefix").getAsString();
+        try {
+            this.dataSource = new HikariDataSource(this.config);
+        } catch (Throwable x) {
+            CrownedBank.getLogger().severe("Couldn't establish database connection");
+        }
+
+        if(data.has("table_prefix"))
+            this.tablePrefix = data.getAsJsonPrimitive("table_prefix").getAsString();
 
         // create database
         try(final var connection = this.dataSource.getConnection();
             final var statement = connection.createStatement()) {
             statement.execute(String.format(tableCommand, tablePrefix));
+
+            CrownedBank.getLogger()
+                    .info("Database connection established to '" + config.getJdbcUrl() + "' as '" + config.getUsername() + "'");
+
         } catch (Exception e) {
             throw new IllegalStateException(e);
         }
@@ -112,7 +123,6 @@ public class SqlRemote
 
                 final var json = Account.Data
                         .encode(account.getData(), Predicate.isEqual(this));
-
                 return statement.execute(
                         String.format(storeCommand,
                                 tablePrefix,
@@ -121,8 +131,7 @@ public class SqlRemote
                                 json
                         ));
             } catch (Exception x) {
-                x.printStackTrace();
-                throw new IllegalStateException("Communication failure.");
+                throw new IllegalStateException("Couldn't store account", x);
             }
         });
     }
@@ -138,17 +147,15 @@ public class SqlRemote
                                  identity.name(),
                                  identity.uuid().toString()
                          ))) {
-                if(result.getFetchSize() == 0)
+                if(result.next()) {
+                    final var json = JsonParser
+                            .parseString(result.getString("json_data"))
+                            .getAsJsonObject();
+                    return Account.Data.decode(json, Predicate.isEqual(this));
+                } else
                     return null;
-
-                final var json = JsonParser
-                        .parseString(result.getString("json_data"))
-                        .getAsJsonObject();
-
-                return Account.Data.decode(json, Predicate.isEqual(this));
             } catch (Exception x) {
-                x.printStackTrace();
-                return null;
+                throw new IllegalStateException("Couldn't fetch account", x);
             }
         });
     }
@@ -162,7 +169,7 @@ public class SqlRemote
                          String.format(fetchWealthyCommand,
                                  tablePrefix,
                                  currency.identifier(),
-                                 CrownedBank.getWealthyCheckAccountLimit()
+                                 CrownedBank.getConfig().wealthCheckAccountLimit()
                          ))) {
                 final var list = new ArrayList<Account>();
                 if(result.getFetchSize() == 0)
@@ -176,8 +183,7 @@ public class SqlRemote
 
                 return list;
             } catch (Exception x) {
-                x.printStackTrace();
-                throw new IllegalStateException("Communication failure.");
+                throw new IllegalStateException("Couldn't fetch wealthy accounts", x);
             }
         });
     }
@@ -194,7 +200,7 @@ public class SqlRemote
                } else
                    return false;
             } catch (Exception x) {
-                throw new IllegalStateException(x);
+                throw new IllegalStateException("Couldn't withdraw", x);
             }
         });
     }
@@ -209,7 +215,7 @@ public class SqlRemote
                 } else
                     return false;
             } catch (Exception x) {
-                throw new IllegalStateException(x);
+                throw new IllegalStateException("Couldn't withdraw", x);
             }
         });
     }
