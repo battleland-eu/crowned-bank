@@ -51,6 +51,38 @@ public class SqlRemote
         this.identifier = identifier;
     }
 
+    @Override
+    public void initialize() {
+        // create data source
+        try {
+            this.dataSource = new HikariDataSource(this.config);
+
+            // create table
+            try(final var connection = this.dataSource.getConnection();
+                final var statement = connection.createStatement()) {
+                statement.execute(String.format(tableCommand, tablePrefix));
+
+                CrownedBank.getLogger()
+                        .info("Database connection established to '" + config.getJdbcUrl() + "' as '" + config.getUsername() + "'");
+
+            } catch (Exception e) {
+                throw new IllegalStateException(e);
+            }
+        } catch (Throwable x) {
+            CrownedBank.getLogger().severe("Couldn't establish database connection");
+        }
+    }
+
+    @Override
+    public void terminate() {
+        try {
+            if(this.dataSource != null)
+                this.dataSource.close();
+        } catch(Exception x) {
+            x.printStackTrace();
+        }
+    }
+
     public static Factory factory() {
         return new Factory() {
             @Override
@@ -86,26 +118,8 @@ public class SqlRemote
                     .getAsInt());
         }
 
-        try {
-            this.dataSource = new HikariDataSource(this.config);
-        } catch (Throwable x) {
-            CrownedBank.getLogger().severe("Couldn't establish database connection");
-        }
-
         if(data.has("table_prefix"))
             this.tablePrefix = data.getAsJsonPrimitive("table_prefix").getAsString();
-
-        // create database
-        try(final var connection = this.dataSource.getConnection();
-            final var statement = connection.createStatement()) {
-            statement.execute(String.format(tableCommand, tablePrefix));
-
-            CrownedBank.getLogger()
-                    .info("Database connection established to '" + config.getJdbcUrl() + "' as '" + config.getUsername() + "'");
-
-        } catch (Exception e) {
-            throw new IllegalStateException(e);
-        }
 
         return this;
     }

@@ -81,6 +81,11 @@ public class Currency
         return identifier != null ? identifier.hashCode() : 0;
     }
 
+    @Override
+    public String toString() {
+        return identifier;
+    }
+
     /**
      * @param currency Currency.
      * @param amount Amount of currency.

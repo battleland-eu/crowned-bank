@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank.config;
 
 import com.google.gson.JsonParser;
+import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.CrownedBankAPI;
 import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.model.Currency;
@@ -61,14 +62,26 @@ public abstract class ConfigBuilder
         try (final var stream = streamConfiguration()) {
             final var root = JsonParser.parseReader(stream).getAsJsonObject();
             {
+                {
+                    // terminate all existing remotes.
+                    api.remoteRepository().all()
+                            .forEach(remote -> {
+                                try {
+                                    remote.terminate();
+                                } catch (Exception x) {
+                                    CrownedBank.getLogger().severe("Couldn't terminate remote " + remote.identifier());
+                                    x.printStackTrace();
+                                }
+
+                            });
+                }
+
                 // configure remotes
                 root.getAsJsonArray("remotes").forEach(profileJson -> {
                     final var json = profileJson.getAsJsonObject();
 
-                    final var remoteIdentifier = json.getAsJsonPrimitive("id")
-                            .getAsString();
-                    final var remoteType = json.getAsJsonPrimitive("type")
-                            .getAsString();
+                    final var remoteIdentifier = json.getAsJsonPrimitive("id").getAsString();
+                    final var remoteType = json.getAsJsonPrimitive("type").getAsString();
                     final var remoteParameters = json.getAsJsonObject("parameters");
 
                     final var remoteProfile = new Remote.Profile(
@@ -80,12 +93,26 @@ public abstract class ConfigBuilder
                     if (remoteFactory == null)
                         throw new IllegalStateException("No such remote factory " + remoteType);
 
-                   final var remote = remoteFactory.build(remoteProfile);
-                   api.remoteRepository().register(remote);
+                    final var remote = remoteFactory.build(remoteProfile);
+
+                    api.remoteRepository()
+                            .register(remote);
                 });
 
-                final var componentDeserializer = GsonComponentSerializer.gson();
+                {
+                    // initialize all registered remotes
+                    api.remoteRepository().all()
+                            .forEach(registeredRemote -> {
+                                try {
+                                    registeredRemote.initialize();
+                                } catch (Exception e) {
+                                    CrownedBank.getLogger().severe("Couldn't initialize remote " + registeredRemote.identifier());
+                                    e.printStackTrace();
+                                }
+                            });
+                }
 
+                final var componentDeserializer = GsonComponentSerializer.gson();
                 // configure currencies
                 root.getAsJsonArray("currencies").forEach(inferior -> {
                     final var currencyJson = inferior.getAsJsonObject();
@@ -93,7 +120,7 @@ public abstract class ConfigBuilder
                     final var remoteIdentifier = currencyJson.getAsJsonPrimitive("remote_id")
                             .getAsString();
                     final var remote = api.remoteRepository().retrieve(remoteIdentifier);
-                    if(remote == null)
+                    if (remote == null)
                         throw new IllegalStateException("No such remote identified by " + remoteIdentifier);
 
                     final var currencyBuilder = Currency.builder()
@@ -102,9 +129,9 @@ public abstract class ConfigBuilder
                             .allowDecimal(currencyJson.getAsJsonPrimitive("allow_decimal").getAsBoolean())
                             .remote(remote);
 
-                    if(currencyJson.has("namePlural"))
+                    if (currencyJson.has("namePlural"))
                         currencyBuilder.namePlural(componentDeserializer.deserializeFromTree(currencyJson.get("namePlural")));
-                    if(currencyJson.has("nameSingular"))
+                    if (currencyJson.has("nameSingular"))
                         currencyBuilder.nameSingular(componentDeserializer.deserializeFromTree(currencyJson.get("nameSingular")));
 
                     api.currencyRepository()

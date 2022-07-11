@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank.remote;
 
 import com.google.gson.JsonObject;
+import eu.battleland.crownedbank.abstracted.Controllable;
 import eu.battleland.crownedbank.abstracted.Identifiable;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
@@ -16,7 +17,7 @@ import java.util.concurrent.CompletableFuture;
  * Remote. Stores, retrieves accounts. Handles transactions of remote accounts.
  */
 public interface Remote
-        extends Identifiable<String> {
+        extends Identifiable<String>, Controllable {
 
     /**
      * Configure remote.

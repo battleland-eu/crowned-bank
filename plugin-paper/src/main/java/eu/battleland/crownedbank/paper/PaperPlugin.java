@@ -375,20 +375,14 @@ public class PaperPlugin
                                         target.sendMessage(Component.translatable("pay.success.received",
                                                 sender.name(), Component.text(String.format(currency.getFormat(), amount)), Currency.prettyCurrencyAmountComponent(currency, amount)).color(NamedTextColor.GRAY)
                                         );
-
-                                        log.info("Payment from '{}' to '{}' completed successfully",
-                                                senderAccount.getIdentity(), targetAccount.getIdentity());
                                     } else {
                                         sender.sendMessage(Component.translatable("pay.failure",
                                                 target.name(), Component.text(String.format(currency.getFormat(), amount)), Currency.prettyCurrencyAmountComponent(currency, amount)).color(NamedTextColor.RED)
                                         );
-
-                                        log.info("Payment from '{}' to '{}' failed",
-                                                senderAccount.getIdentity(), targetAccount.getIdentity());
                                     }
                                 });
                             } catch (Exception e) {
-                                e.printStackTrace();
+                                log.error("Couldn't handle pay command", e);
                             }
                         });
                     }));

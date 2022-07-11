@@ -1,6 +1,7 @@
 package eu.battleland.crownedbank.paper;
 
 import eu.battleland.crownedbank.CrownedBankAPI;
+import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.paper.i18n.KyoriTranslationRegistry;
 import eu.battleland.crownedbank.i18n.TranslationRegistry;
 import eu.battleland.crownedbank.paper.remote.ProxyRemote;
@@ -11,7 +12,9 @@ import lombok.experimental.Accessors;
 import lombok.extern.log4j.Log4j2;
 import net.kyori.adventure.text.Component;
 import org.bukkit.event.Listener;
+import org.jetbrains.annotations.NotNull;
 
+import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
 /**
@@ -63,7 +66,6 @@ public class PaperCrownedBank
     public void terminate() {
 
     }
-
 
 
     @Override

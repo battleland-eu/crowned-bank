@@ -122,6 +122,7 @@ public interface CrownedBankAPI {
             CrownedBank.setApi(this);
         }
 
+
         @Getter
         @Setter(AccessLevel.PROTECTED)
         private Remote remote;
@@ -210,10 +211,12 @@ public interface CrownedBankAPI {
 
                             } catch (Exception e) {
                                 CrownedBank.getLogger()
-                                        .severe(String.format("Couldn't retrieve account data for currencies '%s' from remote '%s'.",
+                                        .severe(String.format("Couldn't retrieve account data for '%s' currencies '%s' from remote '%s': %s",
+                                                identity,
                                                 currencies,
-                                                remote.identifier()));
-                                e.printStackTrace();
+                                                remote.identifier(),
+                                                e
+                                        ));
                             }
                         });
 
@@ -260,6 +263,7 @@ public interface CrownedBankAPI {
 
         public Map<Remote, List<Currency>> currenciesByRemotes() {
             final var result = new HashMap<Remote, List<Currency>>();
+
             this.currencyRepository().all().forEach((currency -> {
                 var remote = currency.getRemote();
                 if (remote == null)
@@ -275,6 +279,7 @@ public interface CrownedBankAPI {
                     return array;
                 });
             }));
+
             return result;
         }
     }
