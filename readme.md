@@ -8,7 +8,7 @@ A proper implementation of economy plugin both for networks and standalone serve
 without having to open any new insecure network ports. 
 
 ## Users
-Download latest build over at [Jenkins](https://jenkins.battleland.eu/job/BattleLand's%20Crowned%20Bank/lastBuild/).
+Download latest build over at [Jenkins](https://jenkins.battleland.eu/job/BattleLand's%20Crowned%20Bank/lastBuild/). And you can read more over at [wiki](https://github.com/battleland-eu/crowned-bank/wiki).
 
 ## Developers
 ### How does it work?
