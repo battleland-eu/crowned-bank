@@ -42,7 +42,18 @@ public interface CrownedBankAPI {
      * @param identity Identity.
      * @return Future of dummy account. May be from cache, or remote.
      */
-    CompletableFuture<Account> retrieveAccount(@NonNull Account.Identity identity);
+    default CompletableFuture<Account> retrieveAccount(@NonNull Account.Identity identity) {
+        return retrieveAccount(identity, false);
+    }
+
+    /**
+     * Retrieves account for identity.
+     *
+     * @param identity Identity.
+     * @param immediate Whether to retrieve immediately.
+     * @return Future of dummy account. May be from cache, or remote.
+     */
+    CompletableFuture<Account> retrieveAccount(@NonNull Account.Identity identity, boolean immediate);
 
     /**
      * Retrieves wealthy accounts.
@@ -51,11 +62,6 @@ public interface CrownedBankAPI {
      * @return Future list of dummy accounts. May be from cache, or remote.
      */
     CompletableFuture<List<Account>> retrieveWealthyAccounts(@NonNull Currency currency);
-
-    /**
-     * @return Account cache.
-     */
-    AccountCache accountCache();
 
     /**
      * @return Remote repository.
@@ -72,6 +78,10 @@ public interface CrownedBankAPI {
      */
     RemoteFactoryRepository remoteFactoryRepository();
 
+    /**
+     * @return Account storage.
+     */
+    AccountStorage accountStorage();
 
     /**
      * @return Translation registry.
@@ -79,20 +89,37 @@ public interface CrownedBankAPI {
     TranslationRegistry<?> translationRegistry();
 
 
-    class AccountCache {
+    class AccountStorage {
 
         @Getter(AccessLevel.PROTECTED)
         @Setter(AccessLevel.PROTECTED)
-        private Map<Account.Identity, Account> cachedAccounts
+        private Map<Account.Identity, Account> accounts
+                = new ConcurrentHashMap<>();
+
+        @Getter(AccessLevel.PROTECTED)
+        @Setter(AccessLevel.PROTECTED)
+        private Map<Account.Identity, Object> identityLocks
                 = new ConcurrentHashMap<>();
 
         /**
-         * Cache account.
+         * Retrieve account lock.
+         * @param identity Account identity.
+         */
+        public @NonNull Object lock(@NotNull Account.Identity identity) {
+            return identityLocks.compute(identity, (id, lock) -> {
+                if(lock == null)
+                    lock = new Object();
+                return lock;
+            });
+        }
+
+        /**
+         * Store account.
          *
          * @param account Account
          */
         public void put(@NotNull Account account) {
-            this.cachedAccounts.put(account.getIdentity(), account);
+            this.accounts.put(account.getIdentity(), account);
         }
 
         /**
@@ -100,14 +127,14 @@ public interface CrownedBankAPI {
          * @return Account
          */
         public @Nullable Account get(@NotNull Account.Identity identity) {
-            return this.cachedAccounts.get(identity);
+            return this.accounts.get(identity);
         }
 
         /**
-         * Invalidates cache.
+         * Invalidates storage.
          */
         public void invalidate() {
-            this.cachedAccounts.clear();
+            this.accounts.clear();
         }
     }
 
@@ -142,8 +169,8 @@ public interface CrownedBankAPI {
                 = null;
 
         @Getter
-        private final AccountCache accountCache
-                = new AccountCache();
+        private final AccountStorage accountStorage
+                = new AccountStorage();
 
         @Getter
         private final RemoteRepository remoteRepository
@@ -179,23 +206,30 @@ public interface CrownedBankAPI {
         }
 
         @Override
-        public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity) {
+        public CompletableFuture<Account> retrieveAccount(@NotNull Account.Identity identity, boolean immediate) {
+
+//            return CompletableFuture.supplyAsync(() -> {
+//                return null;
+//            });
 
             // Check if account is cached
             {
-                final var cachedAccount = this.accountCache.get(identity);
+                final var cachedAccount = this.accountStorage.get(identity);
                 if (cachedAccount != null)
-                    return CompletableFuture.completedFuture(this.accountCache.get(identity));
+                    return CompletableFuture.completedFuture(this.accountStorage.get(identity));
             }
 
-            synchronized (this) {
+            synchronized (accountStorage.lock(identity)) {
                 // Check if account is already being retrieved,
                 // if yes, return it's future
                 {
                     final var existingFuture
                             = this.accountFutures.get(identity);
                     if (existingFuture != null)
-                        return existingFuture; // return existing future
+                        if(!immediate)
+                            return existingFuture; // return existing future if not immediate
+                        else
+                            return CompletableFuture.completedFuture(null); // immediate return
                 }
 
                 {
@@ -220,13 +254,17 @@ public interface CrownedBankAPI {
                             }
                         });
 
-                        this.accountCache.put(account);
+                        this.accountStorage.put(account);
                         this.accountFutures.remove(identity);
                         return account;
                     });
+
                     // Store the account retrieval future
                     this.accountFutures.put(identity, future);
-                    return future;
+
+                    if(immediate)
+                        return CompletableFuture.completedFuture(null); // immediate return
+                    return future; // return account fetch future
                 }
             }
         }

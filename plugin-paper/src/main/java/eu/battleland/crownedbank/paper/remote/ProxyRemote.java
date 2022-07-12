@@ -57,8 +57,10 @@ public class ProxyRemote
                        @NonNull String identifier) {
         this.plugin = plugin;
         this.identifier = identifier;
+    }
 
-
+    @Override
+    public void initialize() {
         // Register outgoing channel
         Bukkit.getServer().getMessenger()
                 .registerOutgoingPluginChannel(this.plugin, ProxyConstants.CHANNEL);
@@ -161,6 +163,11 @@ public class ProxyRemote
                 log.error("Malformed proxy response", x);
             }
         });
+    }
+
+    @Override
+    public void terminate() {
+
     }
 
     public static Factory factory() {

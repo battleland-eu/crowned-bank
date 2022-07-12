@@ -19,7 +19,8 @@ import java.util.logging.Logger;
 /**
  *
  */
-public class CrownedBank {
+public class
+CrownedBank {
 
     /**
      * Logger used by the API.

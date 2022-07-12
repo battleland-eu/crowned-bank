@@ -145,9 +145,9 @@ public class PaperPlugin
             byte[] buffer = new byte[2048];
             int read;
 
-            while (true){
+            while (true) {
                 read = input.read(buffer);
-                if(read == -1)
+                if (read == -1)
                     break;
                 output.write(buffer, 0, read);
             }
@@ -189,7 +189,7 @@ public class PaperPlugin
             final var cacheRoot = admin.literal("cache");
             this.commandManager.command(cacheRoot.literal("invalidate")
                     .handler(ctx -> {
-                        this.api.accountCache().invalidate();
+                        this.api.accountStorage().invalidate();
                         ctx.getSender().sendMessage(Component.text("Cache invalidated.").color(NamedTextColor.GREEN));
                     }));
         }
@@ -370,10 +370,14 @@ public class PaperPlugin
                                 senderAccount.pay(targetAccount, currency, amount).thenAcceptAsync((result) -> {
                                     if (result) {
                                         sender.sendMessage(Component.translatable("pay.success.sent",
-                                                target.name(), Component.text(String.format(currency.getFormat(), amount)), Currency.prettyCurrencyAmountComponent(currency, amount)).color(NamedTextColor.GRAY)
+                                                        target.name(),
+                                                        Currency.prettyCurrencyAmountComponent(currency, amount)
+                                                ).color(NamedTextColor.GRAY)
                                         );
                                         target.sendMessage(Component.translatable("pay.success.received",
-                                                sender.name(), Component.text(String.format(currency.getFormat(), amount)), Currency.prettyCurrencyAmountComponent(currency, amount)).color(NamedTextColor.GRAY)
+                                                        sender.name(),
+                                                        Currency.prettyCurrencyAmountComponent(currency, amount)
+                                                ).color(NamedTextColor.GRAY)
                                         );
                                     } else {
                                         sender.sendMessage(Component.translatable("pay.failure",

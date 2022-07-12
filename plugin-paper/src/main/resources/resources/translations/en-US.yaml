@@ -1,5 +1,5 @@
 pay.failure: "Payment did not go through, try again later."
 pay.failure.funds: "Payment did not go through, insufficient funds."
 pay.failure.currency: "Payment did not go through, invalid currency."
-pay.success.sent: "Successfully paid {1} {2} to {0}."
-pay.success.received: "You've been paid {1} {2} by {0}."
+pay.success.sent: "Successfully paid {1} to {0}."
+pay.success.received: "You've been paid {1} by {0}."

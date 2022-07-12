@@ -59,8 +59,7 @@ public class PlaceholderExpansion
 
                 try {
                     final var account = CrownedBank.getApi()
-                            .retrieveAccount(PlayerIdentity.of(player))
-                            .get(1, TimeUnit.SECONDS);
+                            .retrieveAccount(PlayerIdentity.of(player), true).get();
                     final var status = account.status(currency);
                     if(formatted)
                         return Currency.prettyCurrencyAmountString(currency, status);
