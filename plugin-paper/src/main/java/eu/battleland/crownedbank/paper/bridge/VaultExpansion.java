@@ -4,6 +4,7 @@ import eu.battleland.crownedbank.CrownedBank;
 import eu.battleland.crownedbank.model.Account;
 import eu.battleland.crownedbank.model.Currency;
 import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
+import lombok.extern.log4j.Log4j2;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
 import org.bukkit.OfflinePlayer;
@@ -11,6 +12,7 @@ import org.bukkit.OfflinePlayer;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 
+@Log4j2(topic = "CronwedBank's Vault Expansion")
 public class VaultExpansion implements Economy {
 
     @Override
@@ -136,11 +138,27 @@ public class VaultExpansion implements Economy {
 
     @Override
     public EconomyResponse withdrawPlayer(String playerName, final double amount) {
+        final var currency = Currency.majorCurrency;
+        final var identity = new Account.Identity(null, playerName);
+
+        log.info("Handling withdraw from account '{}' of {} {}", identity, amount, currency.identifier());
+
+//        // Retrieve currency identifier from player name
+//        {
+//            final var currencyName = playerName.substring(playerName.lastIndexOf("|")+1);
+//            if(!currencyName.isEmpty()) {
+//                currency = CrownedBank.getApi().currencyRepository()
+//                        .retrieve(currencyName);
+//            }
+//            if(currency == null)
+//                currency = Currency.majorCurrency;
+//        }
+
+
+
         try {
             return CrownedBank.getApi()
-                    .retrieveAccount(
-                            new Account.Identity(null, playerName)
-                    ).thenApply(account -> account.withdraw(Currency.majorCurrency, (float) amount)
+                    .retrieveAccount(identity).thenApply(account -> account.withdraw(currency, (float) amount)
                             .thenApply(result ->
                                 vaultTransactionRelay(account, amount, result)
                             )).get().get();
@@ -167,11 +185,14 @@ public class VaultExpansion implements Economy {
 
     @Override
     public EconomyResponse depositPlayer(String playerName, double amount) {
+        final var currency = Currency.majorCurrency;
+        final var identity = new Account.Identity(null, playerName);
+
+        log.info("Handling deposit to account '{}' of {} {}", identity, amount, currency.identifier());
+
         try {
             return CrownedBank.getApi()
-                    .retrieveAccount(
-                            new Account.Identity(null, playerName)
-                    ).thenApply(account -> account.deposit(Currency.majorCurrency, (float) amount)
+                    .retrieveAccount(identity).thenApply(account -> account.deposit(Currency.majorCurrency, (float) amount)
                             .thenApply(result ->
                                 vaultTransactionRelay(account, amount, result)
                             )).get().get();
