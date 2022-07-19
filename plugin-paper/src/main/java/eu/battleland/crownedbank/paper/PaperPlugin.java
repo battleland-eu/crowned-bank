@@ -70,6 +70,11 @@ public class PaperPlugin
     };
 
     @Override
+    public void onLoad() {
+
+    }
+
+    @Override
     public void onEnable() {
         {
             try {

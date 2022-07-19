@@ -7,10 +7,11 @@ import eu.battleland.crownedbank.paper.helper.PlayerIdentity;
 import lombok.extern.log4j.Log4j2;
 import net.milkbowl.vault.economy.Economy;
 import net.milkbowl.vault.economy.EconomyResponse;
+import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
+import org.bukkit.entity.Player;
 
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 
 @Log4j2(topic = "CronwedBank's Vault Expansion")
 public class VaultExpansion implements Economy {
@@ -77,24 +78,34 @@ public class VaultExpansion implements Economy {
 
     @Override
     public double getBalance(String playerName) {
+        final var currency = Currency.majorCurrency;
+        var identity = new Account.Identity(null, playerName);
+        if(!identity.valid()) {
+            log.warn("Bank is configured to be uuid major, but withdraw provided only the name of the target ({}). This may impact performance.", playerName);
+            identity = PlayerIdentity.of(Bukkit.getOfflinePlayer(playerName));
+        }
+
         try {
             return CrownedBank.getApi()
-                    .retrieveAccount(
-                            new Account.Identity(null, playerName)
-                    ).get().status(Currency.majorCurrency);
+                    .retrieveAccount(identity).get()
+                    .status(currency);
         } catch (Exception e) {
+            log.error("Couldn't get account balance of '{}'", identity);
             return -1;
         }
     }
 
     @Override
     public double getBalance(OfflinePlayer player) {
+        final var currency = Currency.majorCurrency;
+        final var identity = PlayerIdentity.of(player);
         try {
             return CrownedBank.getApi()
-                    .retrieveAccount(
-                            PlayerIdentity.of(player)
-                    ).get().status(Currency.majorCurrency);
+                    .retrieveAccount(identity)
+                    .get()
+                    .status(currency);
         } catch (Exception e) {
+            log.error("Couldn't get account balance of '{}'", identity);
             return -1;
         }
     }
@@ -129,48 +140,66 @@ public class VaultExpansion implements Economy {
         return has(player, amount);
     }
 
-    private EconomyResponse vaultTransactionRelay(final Account account, final double amount, Boolean result) {
+    private EconomyResponse success(final Account account, final double amount, Boolean result) {
         final var status = account.status(Currency.majorCurrency);
         if (result == null)
             return new EconomyResponse(amount, status, EconomyResponse.ResponseType.FAILURE, "Internal error");
         return new EconomyResponse(amount, status, result ? EconomyResponse.ResponseType.SUCCESS : EconomyResponse.ResponseType.FAILURE, "");
     }
 
-    @Override
-    public EconomyResponse withdrawPlayer(String playerName, final double amount) {
-        final var currency = Currency.majorCurrency;
-        final var identity = new Account.Identity(null, playerName);
+    private EconomyResponse failure() {
+        return new EconomyResponse(-1, -1,
+                EconomyResponse.ResponseType.FAILURE,
+                "Internal Error."
+        );
+    }
 
-        log.info("Handling withdraw from account '{}' of {} {}", identity, amount, currency.identifier());
-
-//        // Retrieve currency identifier from player name
-//        {
-//            final var currencyName = playerName.substring(playerName.lastIndexOf("|")+1);
-//            if(!currencyName.isEmpty()) {
-//                currency = CrownedBank.getApi().currencyRepository()
-//                        .retrieve(currencyName);
-//            }
-//            if(currency == null)
-//                currency = Currency.majorCurrency;
-//        }
-
-
-
+    public EconomyResponse depositPlayer(final Account.Identity identity,
+                                          final Currency currency,
+                                          final float amount) {
         try {
             return CrownedBank.getApi()
-                    .retrieveAccount(identity).thenApply(account -> account.withdraw(currency, (float) amount)
+                    .retrieveAccount(identity).thenApply(account -> account.deposit(currency, amount)
                             .thenApply(result ->
-                                vaultTransactionRelay(account, amount, result)
+                                    success(account, amount, result)
                             )).get().get();
         } catch (Exception e) {
-            return new EconomyResponse(-1, -1, EconomyResponse.ResponseType.FAILURE, "Internal Error.");
+            log.error("Couldn't deposit to '{}' {} {}", identity, amount, currency.identifier(), e);
+            return failure();
+        }
+    }
+
+    public EconomyResponse withdrawPlayer(final Account.Identity identity,
+                                          final Currency currency,
+                                          final float amount) {
+        try {
+            return CrownedBank.getApi()
+                    .retrieveAccount(identity).thenApply(account -> account.withdraw(currency, amount)
+                            .thenApply(result ->
+                                    success(account, amount, result)
+                            )).get().get();
+        } catch (Exception e) {
+            log.error("Couldn't withdraw from '{}' {} {}", identity, amount, currency.identifier(), e);
+            return failure();
         }
     }
 
     @Override
+    public EconomyResponse withdrawPlayer(String playerName, final double amount) {
+        final var currency = Currency.majorCurrency;
+        var identity = new Account.Identity(null, playerName);
+        if(!identity.valid()) {
+            log.warn("Bank is configured to be uuid major, but withdraw provided only the name of the target ({}). This may impact performance.", playerName);
+            identity = PlayerIdentity.of(Bukkit.getOfflinePlayer(playerName));
+        }
+
+        return withdrawPlayer(identity, currency, (float) amount);
+    }
+
+    @Override
     public EconomyResponse withdrawPlayer(OfflinePlayer player, double amount) {
-        return withdrawPlayer(player.getName(),
-                amount);
+        final var currency = Currency.majorCurrency;
+        return withdrawPlayer(PlayerIdentity.of(player), currency, (float) amount);
     }
 
     @Override
@@ -186,24 +215,19 @@ public class VaultExpansion implements Economy {
     @Override
     public EconomyResponse depositPlayer(String playerName, double amount) {
         final var currency = Currency.majorCurrency;
-        final var identity = new Account.Identity(null, playerName);
-
-        log.info("Handling deposit to account '{}' of {} {}", identity, amount, currency.identifier());
-
-        try {
-            return CrownedBank.getApi()
-                    .retrieveAccount(identity).thenApply(account -> account.deposit(Currency.majorCurrency, (float) amount)
-                            .thenApply(result ->
-                                vaultTransactionRelay(account, amount, result)
-                            )).get().get();
-        } catch (Exception e) {
-            return new EconomyResponse(-1, -1, EconomyResponse.ResponseType.FAILURE, "Internal Error.");
+        var identity = new Account.Identity(null, playerName);
+        if(!identity.valid()) {
+            log.warn("Bank is configured to be uuid major, but withdraw provided only the name of the target ({}). This may impact performance.", playerName);
+            identity = PlayerIdentity.of(Bukkit.getOfflinePlayer(playerName));
         }
+
+        return depositPlayer(identity, currency, (float) amount);
     }
 
     @Override
     public EconomyResponse depositPlayer(OfflinePlayer player, double amount) {
-        return depositPlayer(player.getName(), amount);
+        final var currency = Currency.majorCurrency;
+        return depositPlayer(PlayerIdentity.of(player), currency, (float) amount);
     }
 
     @Override

@@ -64,7 +64,7 @@ CrownedBank {
 
     @Getter
     @Setter
-    private static boolean identityNameMajor = false;
+    private static boolean identityNameMajor = true;
 
 
     public static final Gson GSON = new GsonBuilder()

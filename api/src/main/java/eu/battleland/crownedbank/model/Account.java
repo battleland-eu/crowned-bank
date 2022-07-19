@@ -214,6 +214,11 @@ public class Account {
      */
     public record Identity(UUID uuid, String name) {
 
+        public boolean valid() {
+            return CrownedBank.isIdentityNameMajor() && name == null
+                    || (!CrownedBank.isIdentityNameMajor()) && uuid == null;
+        }
+
         @Override
         public String toString() {
             return String.format("%s(%s)", this.name, this.uuid);
